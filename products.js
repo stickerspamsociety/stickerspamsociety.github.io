@@ -1,4 +1,5 @@
-// Catalogo. Il file e' JSON valido dentro window.CATALOG = {
+// Catalogo prodotti - Sticker Spam Society
+window.CATALOG = {
  "config": {
   "currency": "EUR",
   "minOrder": 5,

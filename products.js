@@ -831,7 +831,7 @@
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-hoffman1",
+   "id": "sticker-hoffman2",
    "name": "Hoffman 2000",
    "cat": "stickers",
    "options": [

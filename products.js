@@ -1,6 +1,4 @@
-// Catalogo. Il file e' JSON valido dentro window.CATALOG = ...;
-// Prezzi in euro. letter:true = si puo' spedire in lettera. stk = quanti stickers contiene l'opzione.
-window.CATALOG = {
+// Catalogo. Il file e' JSON valido dentro window.CATALOG = {
  "config": {
   "currency": "EUR",
   "minOrder": 5,
@@ -184,7 +182,7 @@ window.CATALOG = {
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-pippa-bag",
+   "id": "sticker-pippabag",
    "name": "Pippa bag",
    "cat": "stickers",
    "options": [
@@ -316,7 +314,7 @@ window.CATALOG = {
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-scuola-gran-sasso",
+   "id": "sticker-gran-sasso",
    "name": "Scuola Gran Sasso",
    "cat": "stickers",
    "options": [
@@ -382,7 +380,7 @@ window.CATALOG = {
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-non-indurci-instazione",
+   "id": "sticker-non-indurci-in-stazione",
    "name": "Non indurci instazione",
    "cat": "stickers",
    "options": [
@@ -450,7 +448,7 @@ window.CATALOG = {
     "nuovo"
    ],
    "letter": true,
-   "id": "sticker-fotocopia-della-merda",
+   "id": "sticker-fotocopia-merda1",
    "name": "Fotocopia della merda",
    "cat": "stickers",
    "variants": [
@@ -463,6 +461,39 @@ window.CATALOG = {
      "en": "Classic"
     }
    ],
+   "options": [
+    {
+     "l": [
+      "1 sticker",
+      "1 sticker"
+     ],
+     "price": 0.5,
+     "stk": 1
+    },
+    {
+     "l": [
+      "5 stickers",
+      "5 stickers"
+     ],
+     "price": 2,
+     "stk": 5
+    },
+    {
+     "l": [
+      "10 stickers",
+      "10 stickers"
+     ],
+     "price": 3,
+     "stk": 10
+    }
+   ]
+  },
+  {
+   "tags": [],
+   "letter": true,
+   "id": "sticker-sembri-la-fotocopia",
+   "name": "Sembri la fotocopia 2023",
+   "cat": "stickers",
    "options": [
     {
      "l": [
@@ -800,7 +831,7 @@ window.CATALOG = {
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-hoffman-2000",
+   "id": "sticker-hoffman1",
    "name": "Hoffman 2000",
    "cat": "stickers",
    "options": [
@@ -899,7 +930,7 @@ window.CATALOG = {
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-il-naso-bianco-fa-parte-del-outfit",
+   "id": "sticker-il-naso-bianco",
    "name": "Il naso bianco fa parte del outfit",
    "cat": "stickers",
    "options": [
@@ -1200,7 +1231,7 @@ window.CATALOG = {
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-chi-vuole-intendere-intenda",
+   "id": "sticker-chi-vuole-intendere",
    "name": "Chi vuole intendere intenda",
    "cat": "stickers",
    "options": [
@@ -1233,7 +1264,7 @@ window.CATALOG = {
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-voi-stendete-noi-stiriamo",
+   "id": "sticker-voi-stendete",
    "name": "Voi stendete noi stiriamo",
    "cat": "stickers",
    "options": [
@@ -1330,22 +1361,53 @@ window.CATALOG = {
    ]
   },
   {
+   "tags": [],
+   "letter": true,
+   "id": "sticker-attenti-al-cane-bianco",
+   "name": "Attenti al cane bianco",
+   "cat": "stickers",
+   "desc": [
+    "In PVC classico plastificato.",
+    "Classic laminated PVC."
+   ],
+   "options": [
+    {
+     "l": [
+      "1 sticker",
+      "1 sticker"
+     ],
+     "price": 0.5,
+     "stk": 1
+    },
+    {
+     "l": [
+      "5 stickers",
+      "5 stickers"
+     ],
+     "price": 2,
+     "stk": 5
+    },
+    {
+     "l": [
+      "10 stickers",
+      "10 stickers"
+     ],
+     "price": 3,
+     "stk": 10
+    }
+   ]
+  },
+  {
    "tags": [
     "uv"
    ],
    "letter": true,
-   "id": "sticker-attenti-al-cane",
-   "name": "Attenti al cane",
+   "id": "sticker-attenti-al-cane-giallo",
+   "name": "Attenti al cane giallo",
    "cat": "stickers",
-   "variants": [
-    {
-     "it": "Carta",
-     "en": "Paper"
-    },
-    {
-     "it": "UV",
-     "en": "UV"
-    }
+   "desc": [
+    "In carta reattiva ai raggi UV.",
+    "UV-reactive paper."
    ],
    "options": [
     {
@@ -1379,6 +1441,105 @@ window.CATALOG = {
    "letter": true,
    "id": "sticker-ok-il-pezzo-e-giusto",
    "name": "Ok il pezzo è giusto",
+   "cat": "stickers",
+   "options": [
+    {
+     "l": [
+      "1 sticker",
+      "1 sticker"
+     ],
+     "price": 0.5,
+     "stk": 1
+    },
+    {
+     "l": [
+      "5 stickers",
+      "5 stickers"
+     ],
+     "price": 2,
+     "stk": 5
+    },
+    {
+     "l": [
+      "10 stickers",
+      "10 stickers"
+     ],
+     "price": 3,
+     "stk": 10
+    }
+   ]
+  },
+  {
+   "tags": [],
+   "letter": true,
+   "id": "sticker-avvicinars-alla-linea-bianca",
+   "name": "Avvicinarsi alla linea bianca",
+   "cat": "stickers",
+   "options": [
+    {
+     "l": [
+      "1 sticker",
+      "1 sticker"
+     ],
+     "price": 0.5,
+     "stk": 1
+    },
+    {
+     "l": [
+      "5 stickers",
+      "5 stickers"
+     ],
+     "price": 2,
+     "stk": 5
+    },
+    {
+     "l": [
+      "10 stickers",
+      "10 stickers"
+     ],
+     "price": 3,
+     "stk": 10
+    }
+   ]
+  },
+  {
+   "tags": [],
+   "letter": true,
+   "id": "sticker-pippi-raglie-lunghe",
+   "name": "Pippi raglie lunghe",
+   "cat": "stickers",
+   "options": [
+    {
+     "l": [
+      "1 sticker",
+      "1 sticker"
+     ],
+     "price": 0.5,
+     "stk": 1
+    },
+    {
+     "l": [
+      "5 stickers",
+      "5 stickers"
+     ],
+     "price": 2,
+     "stk": 5
+    },
+    {
+     "l": [
+      "10 stickers",
+      "10 stickers"
+     ],
+     "price": 3,
+     "stk": 10
+    }
+   ]
+  },
+  {
+   "tags": [],
+   "letter": true,
+   "id": "sticker-raglioni-a-destra",
+   "name": "Raglioni a destra",
    "cat": "stickers",
    "options": [
     {

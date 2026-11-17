@@ -371,7 +371,7 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
-/* Tubi 3D stile Windows 95 (colori dell'epoca, prospettiva, telecamera che ruota) */
+/* Tubi 3D veloci nei colori del sito (verde acido) */
 (function () {
   if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   function init() {
@@ -379,13 +379,12 @@
     if (!hero || hero.querySelector('.hero-pipes')) return;
     var cv = document.createElement('canvas');
     cv.className = 'hero-pipes'; cv.setAttribute('aria-hidden', 'true');
-    cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.7';
+    cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.55';
     hero.insertBefore(cv, hero.firstChild);
     var ctx = cv.getContext('2d'), W = 0, H = 0, S = 40, running = false, visible = true, ay = 0.6;
-    var AX = 0.5, CAM = 20, B = 5, STEPF = 12, pipes = [];
+    var AX = 0.5, CAM = 20, B = 5, STEPF = 3, TICK = 1000 / 60, pipes = [], last = 0, acc = 0;
     var DIRS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
-    var PAL = [['#7a0000','#e00000','#ffa0a0'],['#7a7a00','#e8e800','#ffffb4'],['#007a00','#00d000','#a8ffa8'],
-               ['#007a7a','#00d8d8','#b4ffff'],['#00007a','#2828ff','#a8a8ff'],['#7a007a','#e000e0','#ffa8ff'],['#686868','#e0e0e0','#ffffff']];
+    var PAL = [['#2f6a00','#b6ff00','#f2ffc2'],['#2f6a00','#b6ff00','#f2ffc2'],['#3f7a00','#7acc00','#e6ff8a'],['#244d00','#5aa000','#c8f060']];
     function resize() {
       var r = hero.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = Math.max(1, r.width); H = Math.max(1, r.height);
@@ -395,7 +394,7 @@
     }
     function rnd(n) { return Math.floor(Math.random() * n); }
     function same(a, b) { return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]; }
-    var cy, sy, cx = Math.cos(AX), sx = Math.sin(AX);
+    var cy = Math.cos(ay), sy = Math.sin(ay), cx = Math.cos(AX), sx = Math.sin(AX);
     function proj(p) {
       var x1 = p[0] * cy + p[2] * sy, z1 = -p[0] * sy + p[2] * cy;
       var y2 = p[1] * cx - z1 * sx, z2 = p[1] * sx + z1 * cx, s = CAM / (CAM + z2);
@@ -403,7 +402,7 @@
     }
     function newPipe(delay) {
       var p = [rnd(2*B+1)-B, rnd(2*B+1)-B, rnd(2*B+1)-B];
-      return { p: p, d: null, t: 0, n: 0, max: 14 + rnd(16), pal: PAL[rnd(PAL.length)], w: 0.26,
+      return { p: p, d: null, t: 0, n: 0, max: 18 + rnd(20), pal: PAL[rnd(PAL.length)], w: 0.26,
                segs: [], balls: [p.slice()], phase: 'wait', timer: delay || 1, alpha: 1 };
     }
     function pickDir(pp) {
@@ -421,14 +420,14 @@
     function update(pp, i) {
       if (pp.phase === 'wait') { if (--pp.timer <= 0) pp.phase = 'grow'; return; }
       if (pp.phase === 'hold') { if (--pp.timer <= 0) pp.phase = 'fade'; return; }
-      if (pp.phase === 'fade') { pp.alpha -= 0.014; if (pp.alpha <= 0) pipes[i] = newPipe(20 + rnd(60)); return; }
-      if (!pp.d) { pp.d = pickDir(pp); pp.t = 0; if (!pp.d) { pp.phase = 'hold'; pp.timer = 60; return; } }
+      if (pp.phase === 'fade') { pp.alpha -= 0.05; if (pp.alpha <= 0) pipes[i] = newPipe(5 + rnd(25)); return; }
+      if (!pp.d) { pp.d = pickDir(pp); pp.t = 0; if (!pp.d) { pp.phase = 'hold'; pp.timer = 20; return; } }
       pp.t++;
       if (pp.t >= STEPF) {
         var a = pp.p, b = [a[0]+pp.d[0], a[1]+pp.d[1], a[2]+pp.d[2]];
         pp.segs.push([a, b]); pp.p = b; pp.n++;
         var nd = pickDir(pp);
-        if (pp.n >= pp.max || !nd) { pp.balls.push(b.slice()); pp.phase = 'hold'; pp.timer = 100 + rnd(80); pp.d = null; return; }
+        if (pp.n >= pp.max || !nd) { pp.balls.push(b.slice()); pp.phase = 'hold'; pp.timer = 30 + rnd(30); pp.d = null; return; }
         if (!same(nd, pp.d)) pp.balls.push(b.slice());
         pp.d = nd; pp.t = 0;
       }
@@ -446,13 +445,19 @@
       g.addColorStop(0, pp.pal[2]); g.addColorStop(0.45, pp.pal[1]); g.addColorStop(1, pp.pal[0]);
       ctx.globalAlpha = Math.max(0, pp.alpha); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, 6.2832); ctx.fill();
     }
-    function loop() {
+    function tick() {
+      ay += 0.008; cy = Math.cos(ay); sy = Math.sin(ay);
+      for (var i = 0; i < pipes.length; i++) update(pipes[i], i);
+    }
+    function loop(ts) {
       if (!running) return;
-      ay += 0.0035; cy = Math.cos(ay); sy = Math.sin(ay);
+      if (!last) last = ts;
+      acc += Math.min(ts - last, 100); last = ts;
+      while (acc >= TICK) { tick(); acc -= TICK; }
       ctx.clearRect(0, 0, W, H);
       var items = [];
       for (var i = 0; i < pipes.length; i++) {
-        var pp = pipes[i]; update(pp, i); pp = pipes[i];
+        var pp = pipes[i];
         if (pp.phase === 'wait') continue;
         for (var k = 0; k < pp.segs.length; k++) { var A = proj(pp.segs[k][0]), Bp = proj(pp.segs[k][1]); items.push({ z: (A[2]+Bp[2])/2, seg: 1, A: A, Bp: Bp, pp: pp }); }
         if (pp.d && pp.phase === 'grow') {
@@ -466,11 +471,11 @@
       ctx.globalAlpha = 1;
       requestAnimationFrame(loop);
     }
-    function start() { if (!running && visible && !document.hidden) { running = true; requestAnimationFrame(loop); } }
+    function start() { if (!running && visible && !document.hidden) { running = true; last = 0; requestAnimationFrame(loop); } }
     function stop() { running = false; }
     resize();
     var count = W < 700 ? 3 : 5;
-    for (var i = 0; i < count; i++) pipes.push(newPipe(1 + i * 45));
+    for (var i = 0; i < count; i++) pipes.push(newPipe(1 + i * 12));
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
     if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; visible ? start() : stop(); }).observe(hero);

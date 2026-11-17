@@ -371,3 +371,110 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+/* Tubi 3D stile Windows 95 (colori dell'epoca, prospettiva, telecamera che ruota) */
+(function () {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  function init() {
+    var hero = document.querySelector('.hero');
+    if (!hero || hero.querySelector('.hero-pipes')) return;
+    var cv = document.createElement('canvas');
+    cv.className = 'hero-pipes'; cv.setAttribute('aria-hidden', 'true');
+    cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.7';
+    hero.insertBefore(cv, hero.firstChild);
+    var ctx = cv.getContext('2d'), W = 0, H = 0, S = 40, running = false, visible = true, ay = 0.6;
+    var AX = 0.5, CAM = 20, B = 5, STEPF = 12, pipes = [];
+    var DIRS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+    var PAL = [['#7a0000','#e00000','#ffa0a0'],['#7a7a00','#e8e800','#ffffb4'],['#007a00','#00d000','#a8ffa8'],
+               ['#007a7a','#00d8d8','#b4ffff'],['#00007a','#2828ff','#a8a8ff'],['#7a007a','#e000e0','#ffa8ff'],['#686868','#e0e0e0','#ffffff']];
+    function resize() {
+      var r = hero.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(1, r.width); H = Math.max(1, r.height);
+      cv.width = W * dpr; cv.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      S = Math.max(24, Math.min(50, W / 22));
+    }
+    function rnd(n) { return Math.floor(Math.random() * n); }
+    function same(a, b) { return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]; }
+    var cy, sy, cx = Math.cos(AX), sx = Math.sin(AX);
+    function proj(p) {
+      var x1 = p[0] * cy + p[2] * sy, z1 = -p[0] * sy + p[2] * cy;
+      var y2 = p[1] * cx - z1 * sx, z2 = p[1] * sx + z1 * cx, s = CAM / (CAM + z2);
+      return [W * 0.5 + x1 * S * s, H * 0.5 - y2 * S * s, z2, s];
+    }
+    function newPipe(delay) {
+      var p = [rnd(2*B+1)-B, rnd(2*B+1)-B, rnd(2*B+1)-B];
+      return { p: p, d: null, t: 0, n: 0, max: 14 + rnd(16), pal: PAL[rnd(PAL.length)], w: 0.26,
+               segs: [], balls: [p.slice()], phase: 'wait', timer: delay || 1, alpha: 1 };
+    }
+    function pickDir(pp) {
+      var ok = [];
+      for (var i = 0; i < 6; i++) {
+        var d = DIRS[i];
+        if (pp.d && d[0] === -pp.d[0] && d[1] === -pp.d[1] && d[2] === -pp.d[2]) continue;
+        if (Math.abs(pp.p[0]+d[0]) > B || Math.abs(pp.p[1]+d[1]) > B || Math.abs(pp.p[2]+d[2]) > B) continue;
+        ok.push(d);
+      }
+      if (!ok.length) return null;
+      if (pp.d && Math.random() > 0.4) for (var j = 0; j < ok.length; j++) if (same(ok[j], pp.d)) return ok[j];
+      return ok[rnd(ok.length)];
+    }
+    function update(pp, i) {
+      if (pp.phase === 'wait') { if (--pp.timer <= 0) pp.phase = 'grow'; return; }
+      if (pp.phase === 'hold') { if (--pp.timer <= 0) pp.phase = 'fade'; return; }
+      if (pp.phase === 'fade') { pp.alpha -= 0.014; if (pp.alpha <= 0) pipes[i] = newPipe(20 + rnd(60)); return; }
+      if (!pp.d) { pp.d = pickDir(pp); pp.t = 0; if (!pp.d) { pp.phase = 'hold'; pp.timer = 60; return; } }
+      pp.t++;
+      if (pp.t >= STEPF) {
+        var a = pp.p, b = [a[0]+pp.d[0], a[1]+pp.d[1], a[2]+pp.d[2]];
+        pp.segs.push([a, b]); pp.p = b; pp.n++;
+        var nd = pickDir(pp);
+        if (pp.n >= pp.max || !nd) { pp.balls.push(b.slice()); pp.phase = 'hold'; pp.timer = 100 + rnd(80); pp.d = null; return; }
+        if (!same(nd, pp.d)) pp.balls.push(b.slice());
+        pp.d = nd; pp.t = 0;
+      }
+    }
+    function drawSeg(it) {
+      var pp = it.pp, w = pp.w * S * (it.A[3] + it.Bp[3]) * 0.5, o = w * 0.22;
+      ctx.globalAlpha = Math.max(0, pp.alpha); ctx.lineCap = 'round';
+      ctx.strokeStyle = pp.pal[0]; ctx.lineWidth = w * 1.8; ctx.beginPath(); ctx.moveTo(it.A[0], it.A[1]); ctx.lineTo(it.Bp[0], it.Bp[1]); ctx.stroke();
+      ctx.strokeStyle = pp.pal[1]; ctx.lineWidth = w * 1.25; ctx.beginPath(); ctx.moveTo(it.A[0], it.A[1]); ctx.lineTo(it.Bp[0], it.Bp[1]); ctx.stroke();
+      ctx.strokeStyle = pp.pal[2]; ctx.lineWidth = w * 0.4; ctx.beginPath(); ctx.moveTo(it.A[0]-o, it.A[1]-o); ctx.lineTo(it.Bp[0]-o, it.Bp[1]-o); ctx.stroke();
+    }
+    function drawBall(it) {
+      var pp = it.pp, c = it.A, r = pp.w * S * c[3] * 1.15;
+      var g = ctx.createRadialGradient(c[0]-r*0.35, c[1]-r*0.35, r*0.08, c[0], c[1], r);
+      g.addColorStop(0, pp.pal[2]); g.addColorStop(0.45, pp.pal[1]); g.addColorStop(1, pp.pal[0]);
+      ctx.globalAlpha = Math.max(0, pp.alpha); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, 6.2832); ctx.fill();
+    }
+    function loop() {
+      if (!running) return;
+      ay += 0.0035; cy = Math.cos(ay); sy = Math.sin(ay);
+      ctx.clearRect(0, 0, W, H);
+      var items = [];
+      for (var i = 0; i < pipes.length; i++) {
+        var pp = pipes[i]; update(pp, i); pp = pipes[i];
+        if (pp.phase === 'wait') continue;
+        for (var k = 0; k < pp.segs.length; k++) { var A = proj(pp.segs[k][0]), Bp = proj(pp.segs[k][1]); items.push({ z: (A[2]+Bp[2])/2, seg: 1, A: A, Bp: Bp, pp: pp }); }
+        if (pp.d && pp.phase === 'grow') {
+          var f = pp.t / STEPF, A2 = proj(pp.p), B2 = proj([pp.p[0]+pp.d[0]*f, pp.p[1]+pp.d[1]*f, pp.p[2]+pp.d[2]*f]);
+          items.push({ z: (A2[2]+B2[2])/2, seg: 1, A: A2, Bp: B2, pp: pp });
+        }
+        for (var j = 0; j < pp.balls.length; j++) { var c = proj(pp.balls[j]); items.push({ z: c[2] - 0.05, A: c, pp: pp }); }
+      }
+      items.sort(function (a, b) { return b.z - a.z; });
+      for (var m = 0; m < items.length; m++) items[m].seg ? drawSeg(items[m]) : drawBall(items[m]);
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(loop);
+    }
+    function start() { if (!running && visible && !document.hidden) { running = true; requestAnimationFrame(loop); } }
+    function stop() { running = false; }
+    resize();
+    var count = W < 700 ? 3 : 5;
+    for (var i = 0; i < count; i++) pipes.push(newPipe(1 + i * 45));
+    window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; visible ? start() : stop(); }).observe(hero);
+    start();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();

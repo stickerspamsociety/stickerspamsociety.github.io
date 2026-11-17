@@ -192,6 +192,21 @@
         var d = document.createElement('div'); d.className = 'feat rv';
         d.innerHTML = '<div class="ph"><img alt="" loading="lazy"><div class="fallback">' + esc(pname(p)) + '</div></div><div><h3>' + esc(pname(p)) + '</h3><p class="d" style="font-weight:400;color:var(--mute)">' + esc(pdesc(p)) + '</p><span class="price">' + money(p.options[0].price) + '</span><button type="button" class="btn add">' + esc(t('add')) + '</button></div>';
         setImg($('img', d), $('.ph', d), sources(p, vi));
+        (function (ph) {
+  var v = document.createElement('video');
+  v.src = 'img/box-400.mp4'; v.muted = true; v.defaultMuted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+  v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); v.preload = 'auto';
+  v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1';
+  ph.style.position = 'relative';
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = 'AUDIO OFF';
+  b.style.cssText = 'position:absolute;right:10px;bottom:10px;z-index:2;padding:7px 12px;font-size:.75rem';
+  var on = false;
+  b.addEventListener('click', function () { on = !on; v.muted = !on; b.textContent = on ? 'AUDIO ON' : 'AUDIO OFF'; if (v.paused) v.play(); });
+  v.addEventListener('error', function () { v.remove(); b.remove(); });
+  v.addEventListener('loadeddata', function () { ph.appendChild(b); });
+  if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); } else v.pause(); }); }, { threshold: 0.25 }).observe(v);
+  ph.appendChild(v);
+})($('.ph', d));
         $('.add', d).addEventListener('click', function () { addToCart(p.id, vi, oi, 1); });
         host.appendChild(d);
       });

@@ -232,3 +232,15 @@ footer a { margin: 0 10px; text-decoration: underline; }
   94%, 100% { opacity: 1; filter: blur(0); transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .logo::after { animation: none; } }
+/* Menu: piu grande, piu grassetto, leggero tremolio al passaggio del mouse */
+.nav { font-size: 1.05rem; gap: 22px; }
+.nav a { font-weight: 900; -webkit-text-stroke: .35px currentColor; display: inline-block; }
+.nav a:hover, .nav a:focus-visible { animation: ssc-shake .4s linear infinite; }
+@keyframes ssc-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(-1px, 0) rotate(-1.2deg); }
+  40% { transform: translate(1px, -1px) rotate(1deg); }
+  60% { transform: translate(-1px, 1px) rotate(-.8deg); }
+  80% { transform: translate(1px, 0) rotate(.8deg); }
+}
+@media (prefers-reduced-motion: reduce) { .nav a:hover, .nav a:focus-visible { animation: none; } }

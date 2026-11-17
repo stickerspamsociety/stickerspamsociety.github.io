@@ -371,7 +371,7 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
-/* Tubi 3D veloci nei colori del sito (verde acido) */
+/* Tubi 3D ordinati: vista isometrica fissa, zone libere attorno a testo e raptor */
 (function () {
   if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   function init() {
@@ -379,104 +379,137 @@
     if (!hero || hero.querySelector('.hero-pipes')) return;
     var cv = document.createElement('canvas');
     cv.className = 'hero-pipes'; cv.setAttribute('aria-hidden', 'true');
-    cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.55';
+    cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.8';
     hero.insertBefore(cv, hero.firstChild);
-    var ctx = cv.getContext('2d'), W = 0, H = 0, S = 40, running = false, visible = true, ay = 0.6;
-    var AX = 0.5, CAM = 20, B = 5, STEPF = 3, TICK = 1000 / 60, pipes = [], last = 0, acc = 0;
+    var mk = document.createElement('canvas'), mx = mk.getContext('2d');
+    var ctx = cv.getContext('2d'), W = 0, H = 0, S = 36, running = false, visible = true;
+    var AY = 0.785, AX = 0.5, CAM = 70, STEPF = 3, TICK = 1000 / 60, BND = [8, 6, 8], pipes = [], last = 0, acc = 0, frames = 0;
+    var cy = Math.cos(AY), sy = Math.sin(AY), cx = Math.cos(AX), sx = Math.sin(AX);
     var DIRS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
     var PAL = [['#2f6a00','#b6ff00','#f2ffc2'],['#2f6a00','#b6ff00','#f2ffc2'],['#3f7a00','#7acc00','#e6ff8a'],['#244d00','#5aa000','#c8f060']];
-    function resize() {
-      var r = hero.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = Math.max(1, r.width); H = Math.max(1, r.height);
-      cv.width = W * dpr; cv.height = H * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      S = Math.max(24, Math.min(50, W / 22));
-    }
     function rnd(n) { return Math.floor(Math.random() * n); }
     function same(a, b) { return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]; }
-    var cy = Math.cos(ay), sy = Math.sin(ay), cx = Math.cos(AX), sx = Math.sin(AX);
     function proj(p) {
       var x1 = p[0] * cy + p[2] * sy, z1 = -p[0] * sy + p[2] * cy;
       var y2 = p[1] * cx - z1 * sx, z2 = p[1] * sx + z1 * cx, s = CAM / (CAM + z2);
       return [W * 0.5 + x1 * S * s, H * 0.5 - y2 * S * s, z2, s];
     }
+    /* zone vietate: righe di testo, bottoni e raptor, con sfumatura */
+    function buildMask() {
+      var hr = hero.getBoundingClientRect(), pad = 26, off = W + 400, rects = [];
+      function add(r) { if (r.width > 2 && r.height > 2) rects.push([r.left - hr.left - pad, r.top - hr.top - pad, r.width + pad * 2, r.height + pad * 2]); }
+      var els = hero.querySelectorAll('.hero-in h1, .hero-in p, .hero-in blockquote, .hero-in .btn, .hero-in a, .hero-in button');
+      for (var i = 0; i < els.length; i++) {
+        var e = els[i];
+        if (e.tagName === 'A' || e.tagName === 'BUTTON' || (e.className + '').indexOf('btn') > -1) { add(e.getBoundingClientRect()); continue; }
+        var rg = document.createRange(); rg.selectNodeContents(e);
+        var rs = rg.getClientRects(); for (var k = 0; k < rs.length; k++) add(rs[k]);
+      }
+      var art = hero.querySelector('.hero-art'); if (art) { var ar = art.getBoundingClientRect(); rects.push([ar.left - hr.left - 40, ar.top - hr.top - 40, ar.width + 80, ar.height + 80]); }
+      mx.clearRect(0, 0, W, H);
+      mx.save(); mx.shadowColor = '#000'; mx.shadowBlur = 44; mx.shadowOffsetX = off; mx.fillStyle = '#000';
+      for (var j = 0; j < rects.length; j++) { var q = rects[j]; mx.fillRect(q[0] - off, q[1], q[2], q[3]); mx.fillRect(q[0] - off, q[1], q[2], q[3]); }
+      mx.restore();
+    }
+    function resize() {
+      var r = hero.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
+      cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      mk.width = W; mk.height = H;
+      S = Math.max(22, Math.min(40, W / 34));
+      BND = [Math.min(18, Math.ceil(W / (2.83 * S))), Math.min(10, Math.ceil(H / (1.8 * S))), Math.min(18, Math.ceil(W / (2.83 * S)))];
+      buildMask();
+    }
+    function freeness(pt) {
+      var q = proj(pt); if (q[0] < 0 || q[0] > W || q[1] < 0 || q[1] > H) return -1;
+      try { return 255 - mx.getImageData(Math.floor(q[0]), Math.floor(q[1]), 1, 1).data[3]; } catch (e) { return 255; }
+    }
     function newPipe(delay) {
-      var p = [rnd(2*B+1)-B, rnd(2*B+1)-B, rnd(2*B+1)-B];
-      return { p: p, d: null, t: 0, n: 0, max: 18 + rnd(20), pal: PAL[rnd(PAL.length)], w: 0.26,
-               segs: [], balls: [p.slice()], phase: 'wait', timer: delay || 1, alpha: 1 };
+      var best = null, bf = -2;
+      for (var i = 0; i < 24; i++) {
+        var p = [rnd(2*BND[0]+1)-BND[0], rnd(2*BND[1]+1)-BND[1], rnd(2*BND[2]+1)-BND[2]], f = freeness(p);
+        if (f > bf) { bf = f; best = p; }
+      }
+      return { p: best, d: null, t: 0, n: 0, max: 14 + rnd(14), pal: PAL[rnd(PAL.length)], w: 0.24,
+               segs: [], balls: [best.slice()], phase: 'wait', timer: delay || 1, alpha: 1 };
     }
     function pickDir(pp) {
       var ok = [];
       for (var i = 0; i < 6; i++) {
         var d = DIRS[i];
         if (pp.d && d[0] === -pp.d[0] && d[1] === -pp.d[1] && d[2] === -pp.d[2]) continue;
-        if (Math.abs(pp.p[0]+d[0]) > B || Math.abs(pp.p[1]+d[1]) > B || Math.abs(pp.p[2]+d[2]) > B) continue;
+        if (Math.abs(pp.p[0]+d[0]) > BND[0] || Math.abs(pp.p[1]+d[1]) > BND[1] || Math.abs(pp.p[2]+d[2]) > BND[2]) continue;
         ok.push(d);
       }
       if (!ok.length) return null;
-      if (pp.d && Math.random() > 0.4) for (var j = 0; j < ok.length; j++) if (same(ok[j], pp.d)) return ok[j];
+      if (pp.d && Math.random() > 0.18) for (var j = 0; j < ok.length; j++) if (same(ok[j], pp.d)) return ok[j];
       return ok[rnd(ok.length)];
     }
     function update(pp, i) {
       if (pp.phase === 'wait') { if (--pp.timer <= 0) pp.phase = 'grow'; return; }
       if (pp.phase === 'hold') { if (--pp.timer <= 0) pp.phase = 'fade'; return; }
-      if (pp.phase === 'fade') { pp.alpha -= 0.05; if (pp.alpha <= 0) pipes[i] = newPipe(5 + rnd(25)); return; }
+      if (pp.phase === 'fade') { pp.alpha -= 0.04; if (pp.alpha <= 0) pipes[i] = newPipe(10 + rnd(40)); return; }
       if (!pp.d) { pp.d = pickDir(pp); pp.t = 0; if (!pp.d) { pp.phase = 'hold'; pp.timer = 20; return; } }
       pp.t++;
       if (pp.t >= STEPF) {
         var a = pp.p, b = [a[0]+pp.d[0], a[1]+pp.d[1], a[2]+pp.d[2]];
         pp.segs.push([a, b]); pp.p = b; pp.n++;
         var nd = pickDir(pp);
-        if (pp.n >= pp.max || !nd) { pp.balls.push(b.slice()); pp.phase = 'hold'; pp.timer = 30 + rnd(30); pp.d = null; return; }
+        if (pp.n >= pp.max || !nd) { pp.balls.push(b.slice()); pp.phase = 'hold'; pp.timer = 40 + rnd(40); pp.d = null; return; }
         if (!same(nd, pp.d)) pp.balls.push(b.slice());
         pp.d = nd; pp.t = 0;
       }
     }
-    function drawSeg(it) {
-      var pp = it.pp, w = pp.w * S * (it.A[3] + it.Bp[3]) * 0.5, o = w * 0.22;
-      ctx.globalAlpha = Math.max(0, pp.alpha); ctx.lineCap = 'round';
-      ctx.strokeStyle = pp.pal[0]; ctx.lineWidth = w * 1.8; ctx.beginPath(); ctx.moveTo(it.A[0], it.A[1]); ctx.lineTo(it.Bp[0], it.Bp[1]); ctx.stroke();
-      ctx.strokeStyle = pp.pal[1]; ctx.lineWidth = w * 1.25; ctx.beginPath(); ctx.moveTo(it.A[0], it.A[1]); ctx.lineTo(it.Bp[0], it.Bp[1]); ctx.stroke();
-      ctx.strokeStyle = pp.pal[2]; ctx.lineWidth = w * 0.4; ctx.beginPath(); ctx.moveTo(it.A[0]-o, it.A[1]-o); ctx.lineTo(it.Bp[0]-o, it.Bp[1]-o); ctx.stroke();
+    function strokeSeg(A, Bp, pp, pass) {
+      var w = pp.w * S * (A[3] + Bp[3]) * 0.5, o = w * 0.22, dx = pass === 2 ? -o : 0;
+      ctx.strokeStyle = pp.pal[pass]; ctx.lineWidth = w * [1.8, 1.25, 0.4][pass];
+      ctx.beginPath(); ctx.moveTo(A[0] + dx, A[1] + dx); ctx.lineTo(Bp[0] + dx, Bp[1] + dx); ctx.stroke();
     }
-    function drawBall(it) {
-      var pp = it.pp, c = it.A, r = pp.w * S * c[3] * 1.15;
+    function drawBall(pt, pp) {
+      var c = pt, r = pp.w * S * c[3] * 1.15;
       var g = ctx.createRadialGradient(c[0]-r*0.35, c[1]-r*0.35, r*0.08, c[0], c[1], r);
       g.addColorStop(0, pp.pal[2]); g.addColorStop(0.45, pp.pal[1]); g.addColorStop(1, pp.pal[0]);
-      ctx.globalAlpha = Math.max(0, pp.alpha); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, 6.2832); ctx.fill();
-    }
-    function tick() {
-      ay += 0.008; cy = Math.cos(ay); sy = Math.sin(ay);
-      for (var i = 0; i < pipes.length; i++) update(pipes[i], i);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, 6.2832); ctx.fill();
     }
     function loop(ts) {
       if (!running) return;
       if (!last) last = ts;
       acc += Math.min(ts - last, 100); last = ts;
-      while (acc >= TICK) { tick(); acc -= TICK; }
+      while (acc >= TICK) { for (var i = 0; i < pipes.length; i++) update(pipes[i], i); acc -= TICK; if (++frames % 90 === 0) buildMask(); }
       ctx.clearRect(0, 0, W, H);
-      var items = [];
-      for (var i = 0; i < pipes.length; i++) {
-        var pp = pipes[i];
+      var list = [];
+      for (var i2 = 0; i2 < pipes.length; i2++) {
+        var pp = pipes[i2];
         if (pp.phase === 'wait') continue;
-        for (var k = 0; k < pp.segs.length; k++) { var A = proj(pp.segs[k][0]), Bp = proj(pp.segs[k][1]); items.push({ z: (A[2]+Bp[2])/2, seg: 1, A: A, Bp: Bp, pp: pp }); }
+        var sg = [], zs = 0;
+        for (var k = 0; k < pp.segs.length; k++) { var A = proj(pp.segs[k][0]), Bp = proj(pp.segs[k][1]); sg.push([A, Bp]); zs += A[2]; }
         if (pp.d && pp.phase === 'grow') {
-          var f = pp.t / STEPF, A2 = proj(pp.p), B2 = proj([pp.p[0]+pp.d[0]*f, pp.p[1]+pp.d[1]*f, pp.p[2]+pp.d[2]*f]);
-          items.push({ z: (A2[2]+B2[2])/2, seg: 1, A: A2, Bp: B2, pp: pp });
+          var f = pp.t / STEPF; sg.push([proj(pp.p), proj([pp.p[0]+pp.d[0]*f, pp.p[1]+pp.d[1]*f, pp.p[2]+pp.d[2]*f])]);
         }
-        for (var j = 0; j < pp.balls.length; j++) { var c = proj(pp.balls[j]); items.push({ z: c[2] - 0.05, A: c, pp: pp }); }
+        var bl = []; for (var j = 0; j < pp.balls.length; j++) bl.push(proj(pp.balls[j]));
+        list.push({ pp: pp, sg: sg, bl: bl, z: sg.length ? zs / Math.max(1, pp.segs.length) : 0 });
       }
-      items.sort(function (a, b) { return b.z - a.z; });
-      for (var m = 0; m < items.length; m++) items[m].seg ? drawSeg(items[m]) : drawBall(items[m]);
+      list.sort(function (a, b) { return b.z - a.z; });
+      ctx.lineCap = 'round';
+      for (var m = 0; m < list.length; m++) {
+        var L = list[m]; ctx.globalAlpha = Math.max(0, L.pp.alpha);
+        for (var pass = 0; pass < 3; pass++) for (var n = 0; n < L.sg.length; n++) strokeSeg(L.sg[n][0], L.sg[n][1], L.pp, pass);
+        for (var q = 0; q < L.bl.length; q++) drawBall(L.bl[q], L.pp);
+      }
       ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'destination-out'; ctx.drawImage(mk, 0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
       requestAnimationFrame(loop);
     }
     function start() { if (!running && visible && !document.hidden) { running = true; last = 0; requestAnimationFrame(loop); } }
     function stop() { running = false; }
-    resize();
-    var count = W < 700 ? 3 : 5;
-    for (var i = 0; i < count; i++) pipes.push(newPipe(1 + i * 12));
-    window.addEventListener('resize', resize);
+    function setup() {
+      resize(); pipes = [];
+      var count = W < 700 ? 2 : 4;
+      for (var i = 0; i < count; i++) pipes.push(newPipe(1 + i * 25));
+    }
+    setup();
+    var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(setup, 200); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(buildMask);
     document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
     if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; visible ? start() : stop(); }).observe(hero);
     start();

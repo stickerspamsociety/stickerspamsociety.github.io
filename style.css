@@ -207,3 +207,14 @@ footer a { margin: 0 10px; text-decoration: underline; }
   html { scroll-padding-top: 100px; }
   .cart-btn { display: none; }
 }
+/* Logo animato hero: liquido + gradiente verde acido */
+.hero-art { position: absolute; z-index: 1; right: max(2vw, calc((100vw - 1100px) / 2)); top: 50%; height: min(640px, 94%); aspect-ratio: 600 / 1292; transform: translateY(-50%); pointer-events: none; }
+.hero-art i { display: block; width: 100%; height: 100%;
+  -webkit-mask: url(img/madonna.png) center / contain no-repeat; mask: url(img/madonna.png) center / contain no-repeat;
+  background: linear-gradient(115deg, #3f7a00 0%, #b6ff00 25%, #f2ffc2 40%, #b6ff00 55%, #2f6a00 75%, #b6ff00 100%); background-size: 300% 300%;
+  animation: ssc-grad 8s ease-in-out infinite alternate, ssc-float 6s ease-in-out infinite alternate;
+  filter: url(#ssc-liquid) drop-shadow(0 0 20px rgba(182,255,0,.35)); }
+@keyframes ssc-grad { from { background-position: 0% 20%; } to { background-position: 100% 80%; } }
+@keyframes ssc-float { from { transform: translateY(-8px) rotate(-1.5deg); } to { transform: translateY(10px) rotate(1.5deg); } }
+@media (max-width: 700px) { .hero-art { opacity: .35; right: -8vw; height: 70%; } .hero-art i { filter: none; } }
+@media (prefers-reduced-motion: reduce) { .hero-art i { animation: none; filter: none; } }

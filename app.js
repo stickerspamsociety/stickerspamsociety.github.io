@@ -217,7 +217,7 @@
 
   function renderShop() {
     C.categories.forEach(renderCategory);
-    catbar.innerHTML = C.categories.map(function (c) { return '<a class="chip" href="#' + c.id + '">' + esc(cname(c)) + '</a>'; }).join('');
+    catbar.innerHTML = C.categories.filter(function (c) { return c.id !== 'offerte'; }).map(function (c) { return '<a class="chip" href="#' + c.id + '">' + esc(cname(c)) + '</a>'; }).join('');
     observe(document);
   }
 
@@ -355,4 +355,19 @@
 
   // ---------- avvio ----------
   applyLang(); renderShop(); renderCart(); trail(); optionalImages(); observe(document);
+})();
+/* Logo animato hero: inserisce il disegno e il filtro liquido */
+(function () {
+  function init() {
+    var h = document.querySelector('.hero');
+    if (!h || document.querySelector('.hero-art')) return;
+    var d = document.createElement('div');
+    d.className = 'hero-art'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = '<i></i>';
+    h.insertBefore(d, h.firstChild);
+    var s = document.createElement('div');
+    s.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    s.innerHTML = '<svg width="0" height="0" aria-hidden="true"><filter id="ssc-liquid" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.010 0.014" numOctaves="2" seed="4" result="n"><animate attributeName="baseFrequency" dur="12s" values="0.010 0.014;0.018 0.009;0.010 0.014" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="40" xChannelSelector="R" yChannelSelector="G"/></filter></svg>';
+    document.body.appendChild(s);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

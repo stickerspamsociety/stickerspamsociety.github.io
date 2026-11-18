@@ -244,3 +244,8 @@ footer a { margin: 0 10px; text-decoration: underline; }
   80% { transform: translate(1px, 0) rotate(.8deg); }
 }
 @media (prefers-reduced-motion: reduce) { .nav a:hover, .nav a:focus-visible { animation: none; } }
+/* Carrello: la parte bassa scorre e gli articoli restano sempre visibili */
+.drawer { height: 100vh; height: 100dvh; max-height: 100dvh; }
+.dr-head { flex: none; }
+.dr-body { flex: 1 1 auto; min-height: 110px; overflow-y: auto; }
+.dr-foot { flex: 0 1 auto; max-height: 58vh; max-height: 58dvh; overflow-y: auto; }

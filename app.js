@@ -180,7 +180,20 @@
     return true;
   }
 
-  function renderCategory(c) {
+    // video di categoria (muto, in loop, con bottone audio)
+  function makeVideo(src) {
+    var w = document.createElement('div'); w.className = 'catvideo rv';
+    var v = document.createElement('video');
+    v.src = src; v.muted = true; v.defaultMuted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+    v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); v.preload = 'metadata';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = 'AUDIO OFF';
+    var on = false;
+    b.addEventListener('click', function () { on = !on; v.muted = !on; b.textContent = on ? 'AUDIO ON' : 'AUDIO OFF'; if (v.paused) v.play(); });
+    v.addEventListener('error', function () { w.remove(); });
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); } else v.pause(); }); }, { threshold: 0.25 }).observe(v);
+    w.appendChild(v); w.appendChild(b);
+    return w;
+  }
     var f = filters[c.id] = filters[c.id] || {};
     var sec = $('#' + c.id, shop);
     if (!sec) {

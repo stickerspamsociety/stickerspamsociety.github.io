@@ -13,12 +13,12 @@
       nav_shop: 'Shop', nav_ship: 'Spedizioni', nav_custom: 'Su misura', nav_about: 'Chi siamo', nav_contact: 'Contatti',
       cart: 'Carrello', hero_sub: 'Non solo stickers.', cta_box: 'Prendi il box da 400', cta_shop: 'Vai agli stickers',
       ship_title: 'Spedizioni',
-      ship_1: 'Italia ed Europa: pacchi con InPost al locker (5€) o BRT Express (7,50€).',
-      ship_2: 'Lettera (3€): in tutto il mondo, senza tracking, senza rispedizione e senza rimborso.',
+      ship_1: 'Italia: pacchi con InPost al locker (5,50€) o a domicilio con BRT o SDA (7,50€). All’estero per ora solo lettera.',
+      ship_2: 'Lettera: 3€ in Italia, 7€ all’estero (Europa compresa, fino a 100 stickers). Senza tracking, senza rispedizione e senza rimborso. All’estero ti mandiamo il video di quando la imbuchiamo alle poste.',
       ship_3: 'Spedizione gratis sui pacchi da 50€.', ship_4: 'Ordine minimo 5€.',
       ship_5: 'Prepariamo l’ordine in 1-2 giorni e lo consegniamo al corriere entro 1 giorno.',
-      ship_6: 'Corrieri: Poste per le lettere, BRT e SDA per i pacchi.',
-      ship_7: 'La lettera va bene solo per stickers, tubini, schede, santini e portaclipper (fino a 50 stickers o 2 oggetti).',
+      ship_6: 'Corrieri: Poste per le lettere, InPost, BRT e SDA per i pacchi.',
+      ship_7: 'La lettera va bene solo per stickers, tubini, schede, santini e portaclipper: massimo 2 oggetti (devono stare in una busta a bolle 20x13) e 50 stickers in Italia, 100 all’estero.',
       ship_8: 'Ritiro a mano: alle feste tekno.',
       custom_title: 'Ordini personalizzati', custom_h: 'Hai un logo?',
       custom_p: 'Facciamo ordini personalizzati con i loghi dei clienti. Scrivici e ne parliamo.', custom_cta: 'Scrivici',
@@ -30,12 +30,15 @@
       empty: 'Il carrello è vuoto.', nothing: 'Nessun risultato.', remove: 'rimuovi',
       subtotal: 'Subtotale', shipping: 'Spedizione', total: 'Totale', free: 'Gratis',
       ship_h: 'Come vuoi riceverlo?',
-      m_inpost: 'InPost locker', m_brt: 'BRT Express', m_letter: 'Lettera',
-      m_letter_s: 'No tracking, no reship, no refund.',
+      m_inpost: 'InPost locker', m_inpost_s: 'Solo Italia, ritiro al locker.',
+      m_brt: 'BRT / SDA', m_brt_s: 'Solo Italia, a domicilio.',
+      m_letter: 'Lettera Italia', m_letter_s: 'Solo Italia. No tracking, no reship, no refund.',
       m_letter_off: 'Non disponibile per questo carrello (solo stickers, tubini, schede, santini, portaclipper: max 50 stickers o 2 oggetti).',
+      m_world: 'Lettera estero', m_world_s: 'Tutto il mondo tranne l’Italia. Senza tracking, può andare persa: ti mandiamo il video di quando la imbuchiamo.',
+      m_world_off: 'Non disponibile per questo carrello (solo stickers, tubini, schede, santini, portaclipper: max 100 stickers o 2 oggetti).',
       left: 'Ti mancano {x} per la spedizione gratis sui pacchi.', gotfree: 'Spedizione gratis sui pacchi!',
       min: 'Ordine minimo {x}.',
-      agree: 'Ho letto i <a href="termini.html" target="_blank">termini</a> e accetto le condizioni di spedizione (la lettera non è tracciata e non si rimborsa).',
+      agree: 'Ho letto i <a href="termini.html" target="_blank">termini</a> e accetto le condizioni di spedizione (la lettera non è tracciata, può andare persa e non si rimborsa).',
       pay: 'Vai al pagamento', wait: 'Un attimo…',
       e_terms: 'Devi accettare i termini.', e_unset: 'Il pagamento non è ancora collegato. Torna presto!', e_fail: 'Qualcosa è andato storto. Riprova o scrivici.',
       tag_uv: 'UV', tag_nuovo: 'Nuovo', tag_acab: 'ACAB'
@@ -45,12 +48,12 @@
       nav_shop: 'Shop', nav_ship: 'Shipping', nav_custom: 'Custom', nav_about: 'About', nav_contact: 'Contact',
       cart: 'Cart', hero_sub: 'Not just stickers.', cta_box: 'Get the 400 box', cta_shop: 'Go to stickers',
       ship_title: 'Shipping',
-      ship_1: 'Italy and Europe: parcels with InPost locker (€5) or BRT Express (€7.50).',
-      ship_2: 'Letter (€3): worldwide, no tracking, no reship and no refund.',
+      ship_1: 'Italy: parcels with InPost to a locker (€5.50) or home delivery with BRT or SDA (€7.50). Abroad: letter only for now.',
+      ship_2: 'Letter: €3 in Italy, €7 abroad (Europe included, up to 100 stickers). No tracking, no reship and no refund. Abroad, we send you a video of us dropping the letter in the mailbox.',
       ship_3: 'Free shipping on parcels from €50.', ship_4: 'Minimum order €5.',
       ship_5: 'We prepare your order in 1-2 days and hand it to the courier within 1 day.',
-      ship_6: 'Couriers: Poste for letters, BRT and SDA for parcels.',
-      ship_7: 'Letters are only for stickers, tubes, cards, holy cards and lighter holders (up to 50 stickers or 2 items).',
+      ship_6: 'Couriers: Poste for letters, InPost, BRT and SDA for parcels.',
+      ship_7: 'Letters are only for stickers, tubes, cards, holy cards and lighter holders: max 2 items (they must fit in a 20x13 bubble mailer) and 50 stickers in Italy, 100 abroad.',
       ship_8: 'Hand pickup: at tekno parties.',
       custom_title: 'Custom orders', custom_h: 'Got a logo?',
       custom_p: 'We make custom orders with your logo. Write to us and let’s talk.', custom_cta: 'Write to us',
@@ -62,12 +65,15 @@
       empty: 'Your cart is empty.', nothing: 'No results.', remove: 'remove',
       subtotal: 'Subtotal', shipping: 'Shipping', total: 'Total', free: 'Free',
       ship_h: 'How do you want it?',
-      m_inpost: 'InPost locker', m_brt: 'BRT Express', m_letter: 'Letter',
-      m_letter_s: 'No tracking, no reship, no refund.',
+      m_inpost: 'InPost locker', m_inpost_s: 'Italy only, pick up at the locker.',
+      m_brt: 'BRT / SDA', m_brt_s: 'Italy only, home delivery.',
+      m_letter: 'Letter Italy', m_letter_s: 'Italy only. No tracking, no reship, no refund.',
       m_letter_off: 'Not available for this cart (only stickers, tubes, cards, holy cards, lighter holders: max 50 stickers or 2 items).',
+      m_world: 'Letter abroad', m_world_s: 'Worldwide except Italy. No tracking, it can get lost: we send you a video of us dropping it in the mailbox.',
+      m_world_off: 'Not available for this cart (only stickers, tubes, cards, holy cards, lighter holders: max 100 stickers or 2 items).',
       left: 'Add {x} more for free parcel shipping.', gotfree: 'Free parcel shipping!',
       min: 'Minimum order {x}.',
-      agree: 'I read the <a href="termini.html" target="_blank">terms</a> and accept the shipping conditions (letters are untracked and non-refundable).',
+      agree: 'I read the <a href="termini.html" target="_blank">terms</a> and accept the shipping conditions (letters are untracked, can get lost and are non-refundable).',
       pay: 'Go to checkout', wait: 'One sec…',
       e_terms: 'You must accept the terms.', e_unset: 'Payment is not connected yet. Come back soon!', e_fail: 'Something went wrong. Try again or write to us.',
       tag_uv: 'UV', tag_nuovo: 'New', tag_acab: 'ACAB'
@@ -80,14 +86,15 @@
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   try { var l0 = localStorage.getItem(LANG_KEY); if (l0 === 'en' || l0 === 'it') lang = l0; else if ((navigator.language || '').slice(0, 2) !== 'it') lang = 'en'; } catch (e) {}
   cart = load(CART_KEY, []); shipMethod = load(SHIP_KEY, 'inpost');
+  if (['inpost', 'brt', 'letter', 'letterworld'].indexOf(shipMethod) < 0) shipMethod = 'inpost';
 
   var byId = {}; C.products.forEach(function (p) { byId[p.id] = p; });
   cart = cart.filter(function (l) { var p = byId[l.id]; return p && p.options[l.o] && (l.v < 0 || (p.variants && p.variants[l.v])); });
 
   function t(k, vars) { var s = (T[lang] && T[lang][k]) || T.it[k] || k; if (vars) for (var x in vars) s = s.replace('{' + x + '}', vars[x]); return s; }
   function money(n) { try { return new Intl.NumberFormat(lang === 'en' ? 'en-IE' : 'it-IT', { style: 'currency', currency: C.config.currency }).format(n); } catch (e) { return n.toFixed(2) + ' €'; } }
-  function slug(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
-  function norm(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function slug(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  function norm(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function pname(p) { return p.name; }
   function vlabel(p, i) { return i >= 0 && p.variants ? p.variants[i][lang] || p.variants[i].it : ''; }
@@ -106,6 +113,11 @@
     var i = 0;
     ph.classList.remove('nofoto');
     img.onerror = function () { i++; if (i < list.length) img.src = list[i]; else ph.classList.add('nofoto'); };
+    img.src = list[0];
+  }
+  function setThumb(img, list) {
+    var i = 0;
+    img.onerror = function () { i++; if (i < list.length) img.src = list[i]; else img.style.display = 'none'; };
     img.src = list[0];
   }
 
@@ -246,9 +258,16 @@
   }
   function subtotal() { return cart.reduce(function (s, l) { return s + byId[l.id].options[l.o].price * l.q; }, 0); }
   function count() { return cart.reduce(function (s, l) { return s + l.q; }, 0); }
-  function letterOk() {
+
+  // spedizioni: lettera Italia (3 euro) e lettera estero (7 euro) hanno limiti propri
+  function letterCfg(kind) {
+    var S = C.config.shipping;
+    if (kind === 'letterworld') return S.letterWorld || { price: 7, maxStickers: 100, maxObjects: 2 };
+    return S.letter;
+  }
+  function letterOk(kind) {
     if (!cart.length) return false;
-    var L = C.config.shipping.letter, stk = 0, obj = 0;
+    var L = letterCfg(kind), stk = 0, obj = 0;
     for (var i = 0; i < cart.length; i++) {
       var p = byId[cart[i].id], o = p.options[cart[i].o];
       if (!p.letter) return false;
@@ -256,9 +275,10 @@
     }
     return stk <= L.maxStickers && obj <= L.maxObjects;
   }
+  function isLetter(m) { return m === 'letter' || m === 'letterworld'; }
   function shipCost(sub) {
     var S = C.config.shipping;
-    if (shipMethod === 'letter') return S.letter.price;
+    if (isLetter(shipMethod)) return letterCfg(shipMethod).price;
     if (sub >= C.config.freeShippingFrom) return 0;
     return S[shipMethod].price;
   }
@@ -266,31 +286,37 @@
   function renderCart() {
     var n = count(), sub = subtotal();
     $('#cartCount').textContent = n; $('#tabCount').textContent = n; $('#tabTotal').textContent = money(sub);
-    if (shipMethod === 'letter' && !letterOk()) { shipMethod = 'inpost'; save(SHIP_KEY, shipMethod); }
+    if (isLetter(shipMethod) && !letterOk(shipMethod)) { shipMethod = 'inpost'; save(SHIP_KEY, shipMethod); }
     var lines = $('#cartLines'), foot = $('#cartFoot');
     if (!cart.length) { lines.innerHTML = '<p class="empty">' + esc(t('empty')) + '</p>'; foot.innerHTML = ''; return; }
     lines.innerHTML = cart.map(function (l, i) {
       var p = byId[l.id], o = p.options[l.o];
       var sub2 = [vlabel(p, l.v), p.options.length > 1 ? olabel(p, l.o) : ''].filter(Boolean).join(' · ');
-      return '<div class="line" data-i="' + i + '"><div class="th"><img alt="" src="' + sources(p, l.v)[sources(p, l.v).length - 2] + '" onerror="this.style.display=\'none\'"></div>' +
+      return '<div class="line" data-i="' + i + '"><div class="th"><img alt=""></div>' +
         '<div><div class="nm">' + esc(pname(p)) + '</div>' + (sub2 ? '<div class="vr">' + esc(sub2) + '</div>' : '') +
         '<div class="qty"><button type="button" data-d="-1" aria-label="-">−</button><span>' + l.q + '</span><button type="button" data-d="1" aria-label="+">+</button></div></div>' +
         '<div class="pr">' + money(o.price * l.q) + '<button type="button" class="rm" data-rm="1">' + esc(t('remove')) + '</button></div></div>';
     }).join('');
     $$('.line', lines).forEach(function (row) {
       var i = +row.getAttribute('data-i');
+      setThumb($('.th img', row), sources(byId[cart[i].id], cart[i].v));
       $$('[data-d]', row).forEach(function (b) { b.addEventListener('click', function () { cart[i].q += +b.getAttribute('data-d'); if (cart[i].q <= 0) cart.splice(i, 1); if (cart[i] && cart[i].q > 99) cart[i].q = 99; save(CART_KEY, cart); renderCart(); }); });
       $('[data-rm]', row).addEventListener('click', function () { cart.splice(i, 1); save(CART_KEY, cart); renderCart(); });
     });
-    var S = C.config.shipping, lok = letterOk(), free = C.config.freeShippingFrom, min = C.config.minOrder;
+    var S = C.config.shipping, lokIT = letterOk('letter'), lokW = letterOk('letterworld'), free = C.config.freeShippingFrom, min = C.config.minOrder;
     var cost = shipCost(sub), tot = sub + cost;
     function m(id, name, price, small, off) {
       return '<label class="' + (off ? 'off' : '') + '"><input type="radio" name="ship" value="' + id + '"' + (shipMethod === id ? ' checked' : '') + (off ? ' disabled' : '') + '><span>' + esc(name) + ' – ' + money(price) + (small ? '<small>' + esc(small) + '</small>' : '') + '</span></label>';
     }
     var inpostP = sub >= free ? 0 : S.inpost.price, brtP = sub >= free ? 0 : S.brt.price;
-    var bar = shipMethod !== 'letter' ? '<div class="bar"><i style="width:' + Math.min(100, sub / free * 100) + '%"></i></div><div class="hint">' + (sub >= free ? esc(t('gotfree')) : esc(t('left', { x: money(free - sub) }))) + '</div>' : '';
+    var bar = !isLetter(shipMethod) ? '<div class="bar"><i style="width:' + Math.min(100, sub / free * 100) + '%"></i></div><div class="hint">' + (sub >= free ? esc(t('gotfree')) : esc(t('left', { x: money(free - sub) }))) + '</div>' : '';
     foot.innerHTML =
-      '<div class="hint" style="color:var(--ink)">' + esc(t('ship_h')) + '</div><div class="ship">' + m('inpost', t('m_inpost'), inpostP) + m('brt', t('m_brt'), brtP) + m('letter', t('m_letter'), S.letter.price, lok ? t('m_letter_s') : t('m_letter_off'), !lok) + '</div>' + bar +
+      '<div class="hint" style="color:var(--ink)">' + esc(t('ship_h')) + '</div><div class="ship">' +
+        m('inpost', t('m_inpost'), inpostP, t('m_inpost_s')) +
+        m('brt', t('m_brt'), brtP, t('m_brt_s')) +
+        m('letter', t('m_letter'), S.letter.price, lokIT ? t('m_letter_s') : t('m_letter_off'), !lokIT) +
+        m('letterworld', t('m_world'), letterCfg('letterworld').price, lokW ? t('m_world_s') : t('m_world_off'), !lokW) +
+      '</div>' + bar +
       '<div class="sum"><span>' + esc(t('subtotal')) + '</span><span>' + money(sub) + '</span></div>' +
       '<div class="sum"><span>' + esc(t('shipping')) + '</span><span>' + (cost === 0 ? esc(t('free')) : money(cost)) + '</span></div>' +
       '<div class="sum tot"><span>' + esc(t('total')) + '</span><span>' + money(tot) + '</span></div>' +

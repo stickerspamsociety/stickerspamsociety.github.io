@@ -163,7 +163,7 @@
     function upd() { price.textContent = money(p.options[oi].price); }
     upd(); setImg(img, ph, sources(p, vi));
     var sv = $('.sel-v', card), so = $('.sel-o', card);
-    if (sv) sv.addEventListener('change', function () { vi = +sv.value; setImg(img, ph, sources(p, vi)); });
+    if (sv) sv.addEventListener('change', function () { vi = +sv.value; setImg(img, ph, sources(p, vi)); if (p.cat === 'tubini' && window.tubinoFx) setTimeout(function () { window.tubinoFx(img, ph); }, 60); });
     if (so) so.addEventListener('change', function () { oi = +so.value; upd(); });
     var btn = $('.add', card);
     btn.addEventListener('click', function () {

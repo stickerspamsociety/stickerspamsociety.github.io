@@ -191,7 +191,11 @@
     b.addEventListener('click', function () { on = !on; v.muted = !on; b.textContent = on ? 'AUDIO ON' : 'AUDIO OFF'; if (v.paused) v.play(); });
     v.addEventListener('error', function () { w.remove(); });
     if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); } else v.pause(); }); }, { threshold: 0.25 }).observe(v);
-    w.appendChild(v); w.appendChild(b);
+    var up = false, _pl = v.play.bind(v);
+    v.play = function () { return up ? Promise.resolve() : _pl(); };
+    var pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn'; pb.textContent = 'PAUSA'; pb.style.cssText = 'left:10px;right:auto';
+    pb.addEventListener('click', function () { up = !up; if (up) { v.pause(); } else { _pl(); } pb.textContent = up ? 'PLAY' : 'PAUSA'; });
+    w.appendChild(v); w.appendChild(b); w.appendChild(pb);
     return w;
   }
 

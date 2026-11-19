@@ -1575,29 +1575,9 @@ window.CATALOG = {
    "id": "tubino-zebrato",
    "name": "Tubino zebrato",
    "cat": "tubini",
-   "desc": [
-    "Tubino in acciaio con collanina e gancetto.",
-    "Steel tube with a little chain and a clasp."
-   ],
-   "variants": [
-    {
-     "it": "Giallo",
-     "en": "Yellow"
-    },
-    {
-     "it": "Bianco",
-     "en": "White"
-    }
-   ],
-   "options": [
-    {
-     "l": [
-      "Tubino",
-      "Tube"
-     ],
-     "price": 15
-    }
-   ]
+   "desc": ["Tubino in acciaio con collanina e gancetto.", "Steel tube with a little chain and a clasp."],
+   "variants": [{"it": "Bianco", "en": "White"}, {"it": "Giallo", "en": "Yellow"}, {"it": "Fetish (nero e acciaio)", "en": "Fetish (black and steel)"}],
+   "options": [{"l": ["Tubino", "Tube"], "price": 15}]
   },
   {
    "tags": [],
@@ -1605,61 +1585,38 @@ window.CATALOG = {
    "id": "tubino-pitonato",
    "name": "Tubino pitonato",
    "cat": "tubini",
-   "desc": [
-    "Tubino in acciaio con collanina e gancetto.",
-    "Steel tube with a little chain and a clasp."
-   ],
-   "variants": [
-    {
-     "it": "Rosso",
-     "en": "Red"
-    },
-    {
-     "it": "Giallo",
-     "en": "Yellow"
-    },
-    {
-     "it": "Verde",
-     "en": "Green"
-    },
-    {
-     "it": "Blu",
-     "en": "Blue"
-    },
-    {
-     "it": "Viola",
-     "en": "Purple"
-    }
-   ],
-   "options": [
-    {
-     "l": [
-      "Tubino",
-      "Tube"
-     ],
-     "price": 15
-    }
-   ]
+   "desc": ["Tubino in acciaio con collanina e gancetto.", "Steel tube with a little chain and a clasp."],
+   "variants": [{"it": "Rosso", "en": "Red"}, {"it": "Giallo", "en": "Yellow"}, {"it": "Verde", "en": "Green"}, {"it": "Blu", "en": "Blue"}, {"it": "Viola", "en": "Purple"}],
+   "options": [{"l": ["Tubino", "Tube"], "price": 15}]
   },
   {
    "tags": [],
    "letter": true,
-   "id": "tubino-rosa-maculato",
-   "name": "Tubino Rosa maculato",
+   "id": "tubino-maculato",
+   "name": "Tubino maculato",
    "cat": "tubini",
-   "desc": [
-    "Tubino in acciaio con collanina e gancetto.",
-    "Steel tube with a little chain and a clasp."
-   ],
-   "options": [
-    {
-     "l": [
-      "Tubino",
-      "Tube"
-     ],
-     "price": 15
-    }
-   ]
+   "desc": ["Tubino in acciaio con collanina e gancetto.", "Steel tube with a little chain and a clasp."],
+   "variants": [{"it": "Bianco e rosa", "en": "White and pink"}, {"it": "Rosa, giallo e nero", "en": "Pink, yellow and black"}],
+   "options": [{"l": ["Tubino", "Tube"], "price": 15}]
+  },
+  {
+   "tags": [],
+   "letter": true,
+   "id": "tubino-collezione-primavera-inglese",
+   "name": "Tubino collezione primavera inglese",
+   "cat": "tubini",
+   "desc": ["Tubino in acciaio con collanina e gancetto.", "Steel tube with a little chain and a clasp."],
+   "variants": [{"it": "Bianco e verde", "en": "White and green"}, {"it": "Blu, azzurro e bianco", "en": "Blue, light blue and white"}, {"it": "Rosa, verde chiaro e bianco", "en": "Pink, light green and white"}, {"it": "Arancione e verde", "en": "Orange and green"}, {"it": "Giallo e blu", "en": "Yellow and blue"}],
+   "options": [{"l": ["Tubino", "Tube"], "price": 15}]
+  },
+  {
+   "tags": [],
+   "letter": true,
+   "id": "tubino-muccato-milka",
+   "name": "Tubino muccato Milka",
+   "cat": "tubini",
+   "desc": ["Tubino in acciaio con collanina e gancetto. Viola, bianco e nero.", "Steel tube with a little chain and a clasp. Purple, white and black."],
+   "options": [{"l": ["Tubino", "Tube"], "price": 15}]
   },
   {
    "tags": [],
@@ -1667,19 +1624,8 @@ window.CATALOG = {
    "id": "tubino-not-just-for-horses",
    "name": "Tubino Not just for horses",
    "cat": "tubini",
-   "desc": [
-    "Tubino in acciaio con collanina e gancetto.",
-    "Steel tube with a little chain and a clasp."
-   ],
-   "options": [
-    {
-     "l": [
-      "Tubino",
-      "Tube"
-     ],
-     "price": 15
-    }
-   ]
+   "desc": ["Tubino in acciaio con collanina e gancetto.", "Steel tube with a little chain and a clasp."],
+   "options": [{"l": ["Tubino", "Tube"], "price": 15}]
   },
   {
    "tags": [],
@@ -1687,39 +1633,8 @@ window.CATALOG = {
    "id": "tubino-tirare-tirare-tirare",
    "name": "Tubino Tirare tirare tirare",
    "cat": "tubini",
-   "desc": [
-    "Tubino in acciaio con collanina e gancetto.",
-    "Steel tube with a little chain and a clasp."
-   ],
-   "options": [
-    {
-     "l": [
-      "Tubino",
-      "Tube"
-     ],
-     "price": 15
-    }
-   ]
-  },
-  {
-   "tags": [],
-   "letter": true,
-   "id": "tubino-fetish",
-   "name": "Tubino Fetish",
-   "cat": "tubini",
-   "desc": [
-    "Tubino in acciaio con collanina e gancetto.",
-    "Steel tube with a little chain and a clasp."
-   ],
-   "options": [
-    {
-     "l": [
-      "Tubino",
-      "Tube"
-     ],
-     "price": 15
-    }
-   ]
+   "desc": ["Tubino in acciaio con collanina e gancetto.", "Steel tube with a little chain and a clasp."],
+   "options": [{"l": ["Tubino", "Tube"], "price": 15}]
   },
   {
    "tags": [],

@@ -1,7 +1,7 @@
 /* fx.js - tubini: il tubino si solleva, ruota e aspira una striscia di farina */
 (function () {
   // ===== REGOLAZIONI =====
-  var ANGLE = 80;             // gradi di rotazione (80 o 100 a seconda del verso)
+  var ANGLE = 120;             // gradi di rotazione (80 o 100 a seconda del verso)
   var T_LIFT = 350, T_ROT = 1700, T_S0 = 2100, T_S = 2400, T_HOLD = 5000, T_TOT = 6400; // ms
   var PAUSE = 2500;           // pausa tra un giro e l'altro (ms)
   var GRAINS = 24;            // granelli

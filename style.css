@@ -244,3 +244,15 @@ footer a { margin: 0 10px; text-decoration: underline; }
   80% { transform: translate(1px, 0) rotate(.8deg); }
 }
 @media (prefers-reduced-motion: reduce) { .nav a:hover, .nav a:focus-visible { animation: none; } }
+
+/* Carrello: la parte bassa scorre e gli articoli restano sempre visibili */
+.drawer { height: 100vh; height: 100dvh; max-height: 100dvh; }
+.dr-head { flex: none; }
+.dr-body { flex: 1 1 auto; min-height: 110px; overflow-y: auto; }
+.dr-foot { flex: 0 1 auto; max-height: 58vh; max-height: 58dvh; overflow-y: auto; }
+
+/* Tubini: video al posto delle foto */
+.catvideo { position: relative; max-width: 560px; margin: 0 auto 22px; border: 3px solid var(--ink); box-shadow: 8px 8px 0 var(--acid); background: #000; }
+.catvideo video { display: block; width: 100%; height: auto; max-height: 70vh; }
+.catvideo .btn { position: absolute; right: 10px; bottom: 10px; padding: 7px 12px; font-size: .75rem; }
+.body-tubini .card .ph { display: none; }

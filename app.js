@@ -223,7 +223,7 @@
           var v = document.createElement('video');
           v.src = 'img/box-400.mp4'; v.muted = true; v.defaultMuted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
           v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); v.preload = 'auto';
-          v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1';
+          v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1';
           ph.style.position = 'relative';
           var b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = 'AUDIO OFF';
           b.style.cssText = 'position:absolute;right:10px;bottom:10px;z-index:2;padding:7px 12px;font-size:.75rem';

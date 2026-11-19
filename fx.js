@@ -1,73 +1,121 @@
-/* fx.js - tubini: il tubino si solleva, ruota e aspira una striscia di farina */
+/* fx.js - tubini v3: il tubino si allinea (anche se la foto e' storta), scende con l'estremita'
+   NON metallica e aspira una striscia sottile di farina */
 (function () {
   // ===== REGOLAZIONI =====
-  var ANGLE = 120;             // gradi di rotazione (80 o 100 a seconda del verso)
+  var DOWN_STEEL = false;     // false = scende l'estremita' NON metallica; true = scende quella d'acciaio
+  var TILT = 15;              // inclinazione dalla verticale, verso il senso di scorrimento (gradi)
   var T_LIFT = 350, T_ROT = 1700, T_S0 = 2100, T_S = 2400, T_HOLD = 5000, T_TOT = 6400; // ms
   var PAUSE = 2500;           // pausa tra un giro e l'altro (ms)
   var GRAINS = 24;            // granelli
-  var PILE_LEN = 0.30;        // lunghezza mucchietto (frazione della larghezza scheda)
-  var PILE_H = 0.8;           // altezza mucchietto (frazione dello spessore del tubino)
+  var PILE_LEN = 0.30;        // lunghezza striscia (frazione della larghezza scheda)
+  var PILE_H = 0.18;          // spessore striscia (frazione dello spessore del tubino)
+  var PILE_MIN = 3, PILE_MAX = 9; // limiti spessore striscia (px)
   var FLOOR = 0.86;           // altezza del piano (frazione dell'altezza scheda)
   var FLOOR_LINE = true;      // riga sottile del piano
-  var OPEN_LEFT = ['primavera-inglese-blu-azzurro']; // riserva se la lettura automatica non funziona
+  // riserva se la lettura automatica sbaglia: pezzo del nome file -> lato dell'acciaio nella foto
+  var OPEN_LEFT = ['primavera-inglese-blu-azzurro'];
+  var OPEN_RIGHT = [];
   // =======================
 
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var st = document.createElement('style');
   st.textContent =
-    '.fx-pile{position:absolute;z-index:2;pointer-events:none;background:#e4dcc6;border:1px solid rgba(0,0,0,.3);border-bottom:0;border-radius:50% 50% 0 0 / 100% 100% 0 0;opacity:0}' +
+    '.fx-pile{position:absolute;z-index:2;pointer-events:none;background:#efe8d6;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.2);opacity:0}' +
     '.fx-floor{position:absolute;left:6%;right:6%;height:0;border-top:2px solid #111;z-index:1;pointer-events:none;opacity:0}' +
-    '.fx-g{position:absolute;z-index:3;width:5px;height:5px;margin:-2px 0 0 -2px;border-radius:50%;background:#e4dcc6;box-shadow:0 0 0 1px rgba(0,0,0,.25);opacity:0;pointer-events:none}';
+    '.fx-g{position:absolute;z-index:3;width:5px;height:5px;margin:-2px 0 0 -2px;border-radius:50%;background:#efe8d6;box-shadow:0 0 0 1px rgba(0,0,0,.25);opacity:0;pointer-events:none}';
   document.head.appendChild(st);
 
   function tf(x, y, r, k) { return 'translate(' + x + 'px,' + y + 'px) rotate(' + r + 'deg) scale(' + k + ')'; }
   function o(t) { return t / T_TOT; }
   function nop() {}
 
-  // ---- lettura della foto: dove sta il tubino e da che parte e' aperto ----
+  // ---- analisi della foto: asse del tubino, lunghezza, spessore, lato d'acciaio ----
+  // d = pixel RGBA, cw x ch. Restituisce misure in pixel del canvas, oppure null.
+  function analyze(d, cw, ch) {
+    var N = cw * ch, i, x, y, cnt = 0, sx = 0, sy = 0;
+    var mask = new Uint8Array(N);
+    for (i = 0; i < N; i++) {
+      var r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+      if (d[i * 4 + 3] > 20 && Math.min(r, g, b) < 235) { mask[i] = 1; cnt++; sx += i % cw; sy += (i / cw) | 0; }
+    }
+    if (cnt < N * 0.02) return null;
+    var mx = sx / cnt, my = sy / cnt, sxx = 0, syy = 0, sxy = 0, dx, dy;
+    for (i = 0; i < N; i++) {
+      if (!mask[i]) continue;
+      dx = (i % cw) - mx; dy = ((i / cw) | 0) - my;
+      sxx += dx * dx; syy += dy * dy; sxy += dx * dy;
+    }
+    var ang = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+    var ax = Math.cos(ang), ay = Math.sin(ang);
+    if (ax < 0) { ax = -ax; ay = -ay; }            // asse orientato verso destra
+    var px = -ay, py = ax;                          // perpendicolare
+    var OFF = cw + ch, B = 2 * OFF + 2;
+    var cntB = new Int32Array(B), nmin = new Float32Array(B), nmax = new Float32Array(B);
+    for (i = 0; i < B; i++) { nmin[i] = 1e9; nmax[i] = -1e9; }
+    var steelNeg = [], steelPos = []; // t dei pixel "acciaio"
+    var tmin = 1e9, tmax = -1e9, t, n, bi;
+    for (i = 0; i < N; i++) {
+      if (!mask[i]) continue;
+      dx = (i % cw) - mx; dy = ((i / cw) | 0) - my;
+      t = dx * ax + dy * ay; n = dx * px + dy * py;
+      bi = Math.round(t) + OFF;
+      cntB[bi]++;
+      if (n < nmin[bi]) nmin[bi] = n;
+      if (n > nmax[bi]) nmax[bi] = n;
+    }
+    var bl = -1, bh = -1;
+    for (i = 0; i < B; i++) if (cntB[i] >= 2) { if (bl < 0) bl = i; bh = i; }
+    if (bl < 0 || bh - bl < cw * 0.3) return null;
+    tmin = bl - OFF; tmax = bh - OFF;
+    var L = tmax - tmin + 1, ws = [], cs = [];
+    for (i = bl + Math.round(L * 0.1); i <= bh - Math.round(L * 0.1); i++) {
+      if (cntB[i] >= 2) { ws.push(nmax[i] - nmin[i] + 1); cs.push((nmax[i] + nmin[i]) / 2); }
+    }
+    ws.sort(function (a, b) { return a - b; }); cs.sort(function (a, b) { return a - b; });
+    var T = ws.length ? ws[ws.length >> 1] : L * 0.1;
+    var nc = cs.length ? cs[cs.length >> 1] : 0;
+    // lato acciaio: nelle due estremita' (35%) quale ha piu' pixel grigi poco saturi
+    var cn = 0, cp = 0, mn, lum, sat, lim = L * 0.35;
+    for (i = 0; i < N; i++) {
+      if (!mask[i]) continue;
+      var rr = d[i * 4], gg = d[i * 4 + 1], bb = d[i * 4 + 2];
+      mn = Math.min(rr, gg, bb); sat = Math.max(rr, gg, bb) - mn; lum = (rr + gg + bb) / 3;
+      if (sat > 45 || lum < 60 || lum > 205) continue;
+      dx = (i % cw) - mx; dy = ((i / cw) | 0) - my;
+      t = dx * ax + dy * ay;
+      if (t < tmin + lim) cn++; else if (t > tmax - lim) cp++;
+    }
+    var tc = (tmin + tmax) / 2;
+    return { xc: (mx + ax * tc + px * nc) / cw, yc: (my + ay * tc + py * nc) / ch,
+      ax: ax, ay: ay, lh: L / 2 / cw, t: T / cw, ss: cp > cn ? 1 : -1, auto: true };
+  }
+
+  // misure per foto che non si possono leggere (apertura da file://), ricavate dalle foto
+  var MANUAL = {
+    'tirare': { xc: 0.4758, yc: 0.4873, ax: 0.73695, ay: -0.67595, lh: 0.52, t: 0.1094, ss: -1 },
+    'zebrato': { xc: 0.4978, yc: 0.4489, ax: 0.99997, ay: -0.00759, lh: 0.4067, t: 0.07, ss: 1 },
+    'primavera': { xc: 0.4983, yc: 0.4531, ax: 0.99958, ay: 0.02908, lh: 0.4083, t: 0.0701, ss: -1 }
+  };
+
   var geoCache = {};
   function measure(img) {
     var key = img.currentSrc || img.src;
     if (geoCache[key]) return geoCache[key];
     var src = decodeURIComponent(key).toLowerCase();
-    var m = { xc: 0.5, yc: 0.47, len: 0.81, t: 0.09, auto: false,
-      open: OPEN_LEFT.some(function (k) { return src.indexOf(k) >= 0; }) ? 'left' : 'right' };
+    var m = null;
     try {
       var nw = img.naturalWidth, nh = img.naturalHeight;
       var cw = 300, ch = Math.max(1, Math.round(cw * nh / nw));
       var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
       var cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, cw, ch);
-      var d = cx.getImageData(0, 0, cw, ch).data;
-      var lum = new Float32Array(cw * ch), mn = [], mx = [], maxExt = 0, x, y, i, r, g, b;
-      for (y = 0; y < ch; y++) {
-        mn[y] = cw; mx[y] = -1;
-        for (x = 0; x < cw; x++) {
-          i = (y * cw + x) * 4; r = d[i]; g = d[i + 1]; b = d[i + 2];
-          lum[y * cw + x] = 0.3 * r + 0.59 * g + 0.11 * b;
-          if (d[i + 3] > 20 && Math.min(r, g, b) < 235) { if (x < mn[y]) mn[y] = x; if (x > mx[y]) mx[y] = x; }
-        }
-        if (mx[y] - mn[y] > maxExt) maxExt = mx[y] - mn[y];
-      }
-      if (maxExt < cw * 0.4) throw 0;
-      var y0 = -1, y1 = -1, x0 = cw, x1 = 0;
-      for (y = 0; y < ch; y++) {
-        if (mx[y] - mn[y] >= maxExt * 0.6) {
-          if (y0 < 0) y0 = y; y1 = y;
-          if (mn[y] < x0) x0 = mn[y]; if (mx[y] > x1) x1 = mx[y];
-        }
-      }
-      var len = x1 - x0, ya = y0 + Math.round((y1 - y0) * 0.15), yb = y1 - Math.round((y1 - y0) * 0.15);
-      var energy = function (xa, xb) {
-        var e = 0, yy, xx;
-        for (yy = ya; yy <= yb; yy++) for (xx = xa; xx < xb; xx++) e += Math.abs(lum[yy * cw + xx + 1] - lum[yy * cw + xx]);
-        return e;
-      };
-      var eL = energy(Math.round(x0 + len * 0.03), Math.round(x0 + len * 0.28));
-      var eR = energy(Math.round(x1 - len * 0.28), Math.round(x1 - len * 0.03));
-      m.open = eL < eR ? 'left' : 'right'; // lato liscio = acciaio aperto
-      m.xc = (x0 + x1 + 1) / 2 / cw; m.yc = (y0 + y1 + 1) / 2 / ch;
-      m.len = (len + 1) / cw; m.t = (y1 - y0 + 1) / ch; m.auto = true;
-    } catch (e) {}
+      m = analyze(cx.getImageData(0, 0, cw, ch).data, cw, ch);
+    } catch (e) { m = null; }
+    if (!m) {
+      for (var k in MANUAL) if (src.indexOf(k) >= 0) { m = Object.assign({ auto: false }, MANUAL[k]); break; }
+    }
+    if (!m) m = { xc: 0.5, yc: 0.47, ax: 1, ay: 0, lh: 0.4, t: 0.07, ss: 1, auto: false };
+    if (OPEN_LEFT.some(function (k) { return src.indexOf(k) >= 0; })) m.ss = -1;
+    if (OPEN_RIGHT.some(function (k) { return src.indexOf(k) >= 0; })) m.ss = 1;
     geoCache[key] = m;
     return m;
   }
@@ -101,23 +149,30 @@
       var m = measure(img);
       var nw = img.naturalWidth, nh = img.naturalHeight;
       var k0 = Math.min(w / nw, h / nh), iw = nw * k0, ih = nh * k0;
-      var Cx = (w - iw) / 2 + m.xc * iw, Cy = (h - ih) / 2 + m.yc * ih; // centro del tubino (perno)
-      var Lh = m.len * iw / 2, T = m.t * ih;                             // mezza lunghezza, spessore
-      var sgn = m.open === 'left' ? -1 : 1;                              // lato della bocchetta
+      var Cx = (w - iw) / 2 + m.xc * iw, Cy = (h - ih) / 2 + m.yc * ih;  // centro del tubino (perno)
+      var Lh = m.lh * iw, T = m.t * iw;                                  // mezza lunghezza, spessore veri
       var dir = isRight(ph) ? 1 : -1;                                    // verso di scorrimento
-      var th = sgn * (dir === sgn ? ANGLE : 180 - ANGLE);                // bocchetta in basso, inclinata verso dir
-      var rad = th * Math.PI / 180, ax = sgn * Math.cos(rad), ay = sgn * Math.sin(rad);
+
+      // estremita' che scende: non metallica (o d'acciaio se DOWN_STEEL)
+      var sd = DOWN_STEEL ? m.ss : -m.ss;
+      var phi = Math.atan2(sd * m.ay, sd * m.ax) * 180 / Math.PI;        // dove sta ora, nella foto
+      var target = 90 - dir * TILT;                                      // dove deve stare (90 = giu')
+      var th = target - phi;
+      while (th > 180) th -= 360;
+      while (th <= -180) th += 360;
+      var tr = target * Math.PI / 180, tc = Math.cos(tr), ts = Math.sin(tr);
+
       var floorY = h * FLOOR;
-      var s = Math.min(1, (floorY - 6) / (2 * Lh * ay + T * Math.abs(ax)));
+      var s = Math.min(1, (floorY - 6) / (2 * Lh * ts + T * Math.abs(tc)));
       var Le = Lh * s, Te = T * s;
-      var cy1 = floorY - (Le * ay + Te / 2 * Math.abs(ax));
+      var cy1 = floorY - (Le * ts + Te / 2 * Math.abs(tc));
       var ty = cy1 - Cy;
-      var nx0 = Cx + Le * ax;                                            // x della bocchetta
-      var px0 = nx0 + dir * Te * 0.45;                                   // dove inizia il mucchietto
+      var nx0 = Cx + Le * tc;                                            // x della punta
+      var px0 = nx0 + dir * Te * 0.45;                                   // dove inizia la striscia
       var L = Math.max(30, Math.min(PILE_LEN * w, dir > 0 ? w - px0 - 6 : px0 - 6));
-      var lift = h * 0.025, pileH = Math.max(8, PILE_H * Te);
+      var lift = h * 0.025, pileH = Math.max(PILE_MIN, Math.min(PILE_MAX, PILE_H * Te));
       var q = T_S / 4, wob = 1.2;
-      var ix = -ax * h * 0.12, iy = -ay * h * 0.12;                      // verso l'interno del tubino
+      var ix = -tc * h * 0.12, iy = -ts * h * 0.12;                      // verso l'interno del tubino
 
       img.style.transformOrigin = Cx + 'px ' + Cy + 'px';
       var anims = [];
@@ -224,6 +279,7 @@
     });
   };
   window.tubinoFx.watch = watch;
+  window.tubinoFx._analyze = analyze;
 
   // aggancio automatico di tutte le schede tubino, anche quelle create dopo
   function scan() {

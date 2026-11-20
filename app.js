@@ -210,7 +210,7 @@
     var chips = '';
     if (c.subs) chips = '<button type="button" class="chip" data-sub="" aria-pressed="' + (!f.sub) + '">' + esc(t('all')) + '</button>' + c.subs.map(function (s) { return '<button type="button" class="chip" data-sub="' + s.id + '" aria-pressed="' + (f.sub === s.id) + '">' + esc(s[lang]) + '</button>'; }).join('');
     if (c.id === 'stickers') chips = '<button type="button" class="chip" data-tag="" aria-pressed="' + (!f.tag) + '">' + esc(t('all')) + '</button>' + tagsHere.map(function (x) { return '<button type="button" class="chip" data-tag="' + x + '" aria-pressed="' + (f.tag === x) + '">' + esc(t('tag_' + x)) + '</button>'; }).join('');
-    var tools = '';
+    if (c.id === 'stickers') chips = ''; var tools = '';
     if (c.id === 'stickers') tools = '<input class="search" type="search" placeholder="' + esc(t('search')) + '" value="' + esc(f.q || '') + '" aria-label="' + esc(t('search')) + '">';
     var list = all.filter(function (p) { return matches(p, f); });
     sec.innerHTML = '<div class="cat-head rv rv-out" style="--bg-img:url(img/sfondi/' + c.id + '.jpg)"><h2>' + esc(cname(c)) + '</h2><p>' + esc(c[lang][1]) + '</p></div>' +

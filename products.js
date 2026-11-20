@@ -34,11 +34,11 @@ window.CATALOG = {
    "id": "stickers",
    "it": [
     "Stickers",
-    "Ottanta grafiche in carta. Collezionali tutti."
+    "I soliti, iconici."
    ],
    "en": [
     "Stickers",
-    "Eighty paper designs. Collect them all."
+    "The usual, iconic."
    ]
   },
   {

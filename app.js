@@ -214,7 +214,7 @@
     if (c.id === 'stickers') tools = '<input class="search" type="search" placeholder="' + esc(t('search')) + '" value="' + esc(f.q || '') + '" aria-label="' + esc(t('search')) + '">';
     var list = all.filter(function (p) { return matches(p, f); });
     sec.innerHTML = '<div class="cat-head rv rv-out" style="--bg-img:url(img/sfondi/' + c.id + '.jpg)"><h2>' + esc(cname(c)) + '</h2><p>' + esc(c[lang][1]) + '</p></div>' +
-      ((chips || tools) ? '<div class="tools-row">' + tools + chips + (c.id === 'stickers' ? '<span class="count">' + list.length + ' ' + esc(t('of')) + ' ' + all.length + '</span>' : '') + '</div>' : '') +
+      ((chips || tools) ? '<div class="tools-row">' + tools + chips + (c.id === 'stickers' ? '<span class="count">' + (f.q ? list.length + ' ' + esc(t('of')) + ' ' + all.length : all.length + ' stickers') + '</span>' : '') + '</div>' : '') +
       '<div class="body-' + c.id + '"></div>';
     var host = $('.body-' + c.id, sec);
     if (c.id === 'offerte') {

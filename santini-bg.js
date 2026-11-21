@@ -1,6 +1,6 @@
 /* santini-bg.js - video in loop sul RETRO della sezione santini, con pulsante audio on/off
    + audio che sale da 0 al 60% in 10 secondi (poi si spegne) quando si clicca
-     il tasto della sezione santini o l'immagine di un santino */
+     il tasto della sezione santini nella barra in alto (non piu' dentro le schede) */
 (function () {
   // ===== REGOLAZIONI =====
   var SRC = 'santini-bg.mp4';   // il video nella stessa cartella di index.html
@@ -10,6 +10,8 @@
   var CURVE = 2;                // forma della salita: 1 = lineare (sembra veloce), 2 = piu' dolce all'inizio, 3 = ancora piu' lenta
   var SHADE = 0.15;             // velo scuro sopra il video, per leggere meglio le schede (0 = nessuno)
   var LABEL_ON = 'AUDIO ON', LABEL_OFF = 'AUDIO OFF';
+  var TOP_ZONE = '#catbar, .catbar, .site-header'; // l'audio parte SOLO da clic dentro queste zone (barra categorie e menu in alto)
+  var CARD_CLICK_STARTS_AUDIO = false;  // false = cambiare santino (ceri, frecce, ingrandimento) NON riattiva l'audio; true = come prima
   // =======================
 
   var st = document.createElement('style');
@@ -99,14 +101,16 @@
   });
   document.body ? document.body.appendChild(btn) : document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(btn); });
 
-  // ---- cosa fa partire l'audio: tasto della sezione santini o immagine di un santino ----
+  // ---- cosa fa partire l'audio: solo i tasti in alto (barra categorie/menu) ----
   function isTrigger(target) {
     if (!target || !target.closest) return false;
     if (target.closest('.sbg-btn')) return false;
+    // click dentro una scheda santino (ceri, frecce, lente): parte solo se CARD_CLICK_STARTS_AUDIO e' true
+    if (target.closest('.card[data-id^="santin"]')) return CARD_CLICK_STARTS_AUDIO;
+    // da qui in poi contano solo i tasti in alto
+    if (!target.closest(TOP_ZONE)) return false;
     // click sul pulsante della barra in alto (link a #schede)
     if (target.closest('a[href="#schede"],a[href="#santini"]')) return true;
-    // click su una scheda santino (immagine o scheda intera)
-    if (target.closest('.card[data-id^="santin"]')) return true;
     // click sul tasto/link/tab della sezione (es. "Schede e santini"): sale di qualche livello cercando
     // un elemento con testo breve che contiene "santin", oppure un attributo che lo contiene
     var el = target;

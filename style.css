@@ -256,3 +256,12 @@ footer a { margin: 0 10px; text-decoration: underline; }
 .catvideo video { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: cover; }
 .catvideo .btn { position: absolute; right: 10px; bottom: 10px; padding: 7px 12px; font-size: .75rem; }
 /* foto tubini visibili */
+
+/* retrobottega: esaurito e vacanza */
+.announce.vac { background: var(--ink); color: var(--acid); }
+.card.soldout .ph img, .feat.soldout .ph img { filter: grayscale(1); opacity: .4; }
+.card.soldout h3, .card.soldout .price { color: var(--mute); }
+.card.soldout .ph::after { content: attr(data-sold); position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; font-size: .85rem; letter-spacing: .12em; text-transform: uppercase; background: var(--ink); color: var(--bg); padding: 5px 0; }
+.add[disabled] { background: #d6d6d0; box-shadow: none; cursor: not-allowed; }
+.line.soldout-line { opacity: .5; }
+.line.soldout-line .nm { text-decoration: line-through; }

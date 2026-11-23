@@ -1930,7 +1930,7 @@ window.CATALOG = {
    "tags": [],
    "letter": false,
    "id": "pianale-xtc-teschietto",
-   "name": "Pianale Teschietto",
+   "name": "Pianale Teschio",
    "cat": "pianali",
    "sub": "xtc",
    "desc": [
@@ -1944,6 +1944,90 @@ window.CATALOG = {
       "Tray"
      ],
      "price": 15
+    }
+   ]
+  },
+  {
+   "tags": [],
+   "letter": false,
+   "id": "pianale-chilata",
+   "name": "Pianale Chilata",
+   "cat": "pianali",
+   "sub": "grafiche",
+   "desc": [
+    "Pianale squadrato con grafica.",
+    "Square tray with artwork."
+   ],
+   "options": [
+    {
+     "l": [
+      "Pianale",
+      "Tray"
+     ],
+     "price": 10
+    }
+   ]
+  },
+  {
+   "tags": [],
+   "letter": false,
+   "id": "pianale-frate-karate",
+   "name": "Pianale Frate karate",
+   "cat": "pianali",
+   "sub": "grafiche",
+   "desc": [
+    "Pianale squadrato con grafica.",
+    "Square tray with artwork."
+   ],
+   "options": [
+    {
+     "l": [
+      "Pianale",
+      "Tray"
+     ],
+     "price": 10
+    }
+   ]
+  },
+  {
+   "tags": [],
+   "letter": false,
+   "id": "pianale-gatto",
+   "name": "Pianale Gatto",
+   "cat": "pianali",
+   "sub": "grafiche",
+   "desc": [
+    "Pianale squadrato con grafica.",
+    "Square tray with artwork."
+   ],
+   "options": [
+    {
+     "l": [
+      "Pianale",
+      "Tray"
+     ],
+     "price": 10
+    }
+   ]
+  },
+  {
+   "tags": [],
+   "letter": false,
+   "id": "pianale-pippo",
+   "name": "Pianale Pippo",
+   "cat": "pianali",
+   "sub": "grafiche",
+   "desc": [
+    "Pianale squadrato con grafica.",
+    "Square tray with artwork."
+   ],
+   "options": [
+    {
+     "l": [
+      "Pianale",
+      "Tray"
+     ],
+     "price": 10
     }
    ]
   },

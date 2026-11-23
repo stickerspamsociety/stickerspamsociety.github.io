@@ -81,7 +81,25 @@
   };
 
   // ---------- stato ----------
-  var lang = 'it', cart = [], shipMethod = 'inpost', agreed = false;
+  var lang = 'it', cart = [], shipMethod = 'inpost', agreed = false, agreed2 = false;
+  var TERMS_V = '2026-11-23';
+  var TC = {
+    it: {
+      read: 'Ho letto i <a href="termini.html" target="_blank">termini</a> di vendita.',
+      und_letter: 'Ho capito che la lettera non \u00e8 tracciata, non viene rispedita se si perde e non \u00e8 rimborsabile.',
+      und: 'Ho capito le condizioni di spedizione e di pagamento indicate nei termini e le accetto.',
+      e1: 'Devi confermare di aver letto i termini.',
+      e2: 'Devi confermare di aver capito le condizioni.'
+    },
+    en: {
+      read: 'I have read the <a href="termini.html" target="_blank">terms</a> of sale.',
+      und_letter: 'I understand that the letter is untracked, will not be reshipped if lost and is non-refundable.',
+      und: 'I understand the shipping and payment conditions in the terms and I accept them.',
+      e1: 'You must confirm that you have read the terms.',
+      e2: 'You must confirm that you have understood the conditions.'
+    }
+  };
+  function tc(k) { return TC[lang === 'en' ? 'en' : 'it'][k]; }
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   try { var l0 = localStorage.getItem(LANG_KEY); if (l0 === 'en' || l0 === 'it') lang = l0; else if ((navigator.language || '').slice(0, 2) !== 'it') lang = 'en'; } catch (e) {}
@@ -344,7 +362,7 @@
   function renderCart() {
     var n = count(), sub = subtotal();
     $('#cartCount').textContent = n; $('#tabCount').textContent = n; $('#tabTotal').textContent = money(sub);
-    if (isLetter(shipMethod) && !letterOk(shipMethod)) { shipMethod = 'inpost'; save(SHIP_KEY, shipMethod); }
+    if (isLetter(shipMethod) && !letterOk(shipMethod)) { shipMethod = 'inpost'; agreed2 = false; save(SHIP_KEY, shipMethod); }
     var lines = $('#cartLines'), foot = $('#cartFoot');
     if (!cart.length) { lines.innerHTML = '<p class="empty">' + esc(t('empty')) + '</p>'; foot.innerHTML = ''; return; }
     lines.innerHTML = cart.map(function (l, i) {
@@ -379,10 +397,12 @@
       '<div class="sum"><span>' + esc(t('shipping')) + '</span><span>' + (cost === 0 ? esc(t('free')) : money(cost)) + '</span></div>' +
       '<div class="sum tot"><span>' + esc(t('total')) + '</span><span>' + money(tot) + '</span></div>' +
       (sub < min ? '<div class="hint">' + esc(t('min', { x: money(min) })) + '</div>' : '') +
-      '<label class="terms"><input type="checkbox" id="agree"' + (agreed ? ' checked' : '') + '><span>' + t('agree') + '</span></label>' +
+      '<label class="terms"><input type="checkbox" id="agree"' + (agreed ? ' checked' : '') + '><span>' + tc('read') + '</span></label>' +
+      '<label class="terms"><input type="checkbox" id="agree2"' + (agreed2 ? ' checked' : '') + '><span>' + tc(isLetter(shipMethod) ? 'und_letter' : 'und') + '</span></label>' +
       '<button type="button" class="btn" id="payBtn"' + (sub < min ? ' disabled' : '') + '>' + esc(t('pay')) + '</button><div class="err" id="err" role="alert"></div>';
-    $$('input[name=ship]', foot).forEach(function (r) { r.addEventListener('change', function () { shipMethod = r.value; save(SHIP_KEY, shipMethod); renderCart(); }); });
+    $$('input[name=ship]', foot).forEach(function (r) { r.addEventListener('change', function () { shipMethod = r.value; agreed2 = false; save(SHIP_KEY, shipMethod); renderCart(); }); });
     $('#agree').addEventListener('change', function (e) { agreed = e.target.checked; });
+    $('#agree2').addEventListener('change', function (e) { agreed2 = e.target.checked; });
     $('#payBtn').addEventListener('click', checkout);
   }
 
@@ -390,12 +410,13 @@
     if (shopClosed()) { toast(tx('closed_cart')); return; }
     if (cart.some(function (l) { return isOff(byId[l.id], l.v); })) { toast(tx('cart_off')); return; }
     var err = $('#err'), btn = $('#payBtn'); err.textContent = '';
-    if (!$('#agree').checked) { err.textContent = t('e_terms'); return; }
+    if (!$('#agree').checked) { err.textContent = tc('e1'); return; }
+    if (!$('#agree2').checked) { err.textContent = tc('e2'); return; }
     if (!CFG.checkoutEndpoint) { err.textContent = t('e_unset'); return; }
     btn.disabled = true; btn.textContent = t('wait');
     fetch(CFG.checkoutEndpoint, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cart.map(function (l) { return { id: l.id, v: l.v, o: l.o, q: l.q }; }), shipping: shipMethod, lang: lang })
+      body: JSON.stringify({ items: cart.map(function (l) { return { id: l.id, v: l.v, o: l.o, q: l.q }; }), shipping: shipMethod, lang: lang, consent: { read: true, understood: true, v: TERMS_V } })
     }).then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.url) throw new Error(j.error || 'err'); return j; }); })
       .then(function (j) { window.location.href = j.url; })
       .catch(function (e) { err.textContent = t('e_fail') + (e && e.message && e.message !== 'err' ? ' (' + e.message + ')' : ''); btn.disabled = false; btn.textContent = t('pay'); });

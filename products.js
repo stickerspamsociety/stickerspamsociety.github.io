@@ -1506,39 +1506,6 @@ window.CATALOG = {
   {
    "tags": [],
    "letter": true,
-   "id": "sticker-pippi-raglie-lunghe",
-   "name": "Pippi raglie lunghe",
-   "cat": "stickers",
-   "options": [
-    {
-     "l": [
-      "1 sticker",
-      "1 sticker"
-     ],
-     "price": 0.5,
-     "stk": 1
-    },
-    {
-     "l": [
-      "5 stickers",
-      "5 stickers"
-     ],
-     "price": 2,
-     "stk": 5
-    },
-    {
-     "l": [
-      "10 stickers",
-      "10 stickers"
-     ],
-     "price": 3,
-     "stk": 10
-    }
-   ]
-  },
-  {
-   "tags": [],
-   "letter": true,
    "id": "sticker-raglioni-a-destra",
    "name": "Raglioni a destra",
    "cat": "stickers",

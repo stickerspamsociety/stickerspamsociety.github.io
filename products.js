@@ -1812,7 +1812,7 @@ window.CATALOG = {
    "tags": [],
    "letter": false,
    "id": "pianale-warner-30cm",
-   "name": "Pianale Warner Bros 30 cm",
+   "name": "Pianale Tributo Warner Bros 30 cm",
    "cat": "pianali",
    "sub": "warner",
    "options": [
@@ -1930,7 +1930,7 @@ window.CATALOG = {
    "tags": [],
    "letter": false,
    "id": "pianale-xtc-teschietto",
-   "name": "Pianale Teschio",
+   "name": "Pianale Teschio MyBrand",
    "cat": "pianali",
    "sub": "xtc",
    "desc": [
@@ -1993,7 +1993,7 @@ window.CATALOG = {
    "tags": [],
    "letter": false,
    "id": "pianale-gatto",
-   "name": "Pianale Gatto",
+   "name": "Pianale Gatto smarrito",
    "cat": "pianali",
    "sub": "grafiche",
    "desc": [
@@ -2014,7 +2014,7 @@ window.CATALOG = {
    "tags": [],
    "letter": false,
    "id": "pianale-pippo",
-   "name": "Pianale Pippo",
+   "name": "Pianale Colpi sì ma non di sonno",
    "cat": "pianali",
    "sub": "grafiche",
    "desc": [
@@ -2077,7 +2077,7 @@ window.CATALOG = {
    "tags": [],
    "letter": false,
    "id": "pianale-inferno",
-   "name": "Pianale Inferno",
+   "name": "Pianale Inferno.it",
    "cat": "pianali",
    "sub": "grafiche",
    "desc": [
@@ -2099,27 +2099,6 @@ window.CATALOG = {
    "letter": false,
    "id": "pianale-attenzione-pezzo-finito",
    "name": "Pianale Attenzione pezzo finito",
-   "cat": "pianali",
-   "sub": "grafiche",
-   "desc": [
-    "Pianale squadrato con grafica.",
-    "Square tray with artwork."
-   ],
-   "options": [
-    {
-     "l": [
-      "Pianale",
-      "Tray"
-     ],
-     "price": 10
-    }
-   ]
-  },
-  {
-   "tags": [],
-   "letter": false,
-   "id": "pianale-colpi-si-ma-non-di-sonno",
-   "name": "Pianale Colpi sì ma non di sonno",
    "cat": "pianali",
    "sub": "grafiche",
    "desc": [
@@ -2182,7 +2161,7 @@ window.CATALOG = {
    "tags": [],
    "letter": false,
    "id": "pianale-stendere",
-   "name": "Pianale Stendere",
+   "name": "Pianale Stendere!",
    "cat": "pianali",
    "sub": "grafiche",
    "desc": [

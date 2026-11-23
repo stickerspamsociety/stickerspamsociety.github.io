@@ -78,11 +78,23 @@ textarea.fld{padding:12px 14px;height:84px;resize:none}
 .sts .chip.sel{background:#b6ff00;color:#0b0b0b;border-color:#b6ff00}
 .trk{margin-top:8px;min-height:44px}
 .small{height:44px;padding:0 14px;border:2px solid #3a3a37;background:transparent;cursor:pointer;margin:4px 8px 4px 0}
+.tabs button{padding:0 4px}
+select.fld{padding:0 10px}
+.nrow{display:grid;grid-template-columns:1fr 1fr 78px 62px 44px;gap:6px;margin-bottom:6px}
+.nrow .fld{padding:0 8px;min-width:0;font-size:14px}
+.nrow .small{margin:0;padding:0}
+.nres{margin:6px 0 12px}
+.nres .chip{display:block;width:100%;text-align:left;margin-bottom:6px;height:auto;min-height:44px;padding:8px 12px;white-space:normal}
+pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;color:#cfcfc9;white-space:pre-wrap;word-break:break-all;margin:6px 0 14px}
+.okbox{border:2px solid #b6ff00;padding:12px;margin-bottom:14px;font-size:14px}
+.errbox{color:#ff7b7b;font-size:14px;margin:8px 0;min-height:20px}
+.lastx{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a2a;padding:10px 0}
+.lastx span{min-width:0;flex:1}
 </style>
 </head>
 <body>
 <div class="top"><div class="logo">Retro<b>bottega</b></div><span id="stat"></span></div>
-<nav class="tabs" id="tabs" hidden><button type="button" data-tab="orders">Ordini</button><button type="button" data-tab="prod">Prodotti</button></nav>
+<nav class="tabs" id="tabs" hidden><button type="button" data-tab="orders">Ordini</button><button type="button" data-tab="prod">Prodotti</button><button type="button" data-tab="new">+ Nuovo</button></nav>
 
 <section id="login">
 <label class="lbl" for="pw">Password</label>
@@ -105,6 +117,11 @@ textarea.fld{padding:12px 14px;height:84px;resize:none}
 <button type="button" class="chip" id="ocsv">Scarica CSV spedizioni</button>
 <button type="button" class="chip" id="otest">Invia avviso di prova</button>
 </div>
+</section>
+<section id="newp" hidden>
+<div id="nform"></div>
+<div class="lbl" style="margin:18px 0 6px">Prodotti aggiunti dal pannello</div>
+<div id="nlist"></div>
 </section>
 <div id="prod" hidden>
 <div id="top"></div>
@@ -253,10 +270,10 @@ textarea.fld{padding:12px 14px;height:84px;resize:none}
   var METHODS = { inpost: 'InPost locker', brt: 'BRT / SDA', letter: 'Lettera Italia', letterworld: 'Lettera estero' };
   var STS = [['new', 'Da spedire'], ['packed', 'Imballato'], ['shipped', 'Spedito']];
   function setTab(t) {
-    tab = t; $('#orders').hidden = t !== 'orders'; $('#prod').hidden = t !== 'prod';
+    tab = t; $('#orders').hidden = t !== 'orders'; $('#prod').hidden = t !== 'prod'; $('#newp').hidden = t !== 'new'; if (t === 'new') renderNew();
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.className = b.getAttribute('data-tab') === t ? 'sel' : ''; });
   }
-  function initOrders() { $('#tabs').hidden = false; setTab('orders'); loadInfo(); loadOrders(true); }
+  function initOrders() { $('#tabs').hidden = false; setTab('orders'); loadInfo(); loadOrders(true); loadExtra(); }
   function loadInfo() {
     oapi('GET', '/admin/info').then(function (j) { info = j; renderInfo(); }).catch(function (e) { $('#info').innerHTML = '<span class="bad">Info non disponibili: ' + esc(e.message) + '</span>'; });
   }
@@ -369,6 +386,155 @@ textarea.fld{padding:12px 14px;height:84px;resize:none}
     if (e.target.hasAttribute && e.target.hasAttribute('data-trk')) { var o = find(e.target.getAttribute('data-trk')); if (o) { o.trk = e.target.value; saveOrder(o); } }
   });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && !$('#app').hidden && tab === 'orders') loadOrders(true); });
+
+  // ================= NUOVO PRODOTTO =================
+  var BASE_N = C.products.length, extras = [], nf = null, nsrcq = '', nlast = null;
+  var PREFIX = { stickers: 'sticker', tubini: 'tubino', schede: 'schede', pianali: 'pianale', clipper: 'clipper', cartine: 'cartine', merch: 'merch', offerte: 'offerta' };
+  function slug(s) { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/['\u2019]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  function applyExtra() { C.products.length = BASE_N; extras.forEach(function (p) { C.products.push(p); }); }
+  function loadExtra() {
+    oapi('GET', '/admin/extra').then(function (j) { extras = j.extra || []; applyExtra(); render(); if (tab === 'new') renderNew(); })
+      .catch(function (e) { setStat('Prodotti nuovi non letti: ' + e.message, true); });
+  }
+  function blank() { return { id: '', idAuto: true, name: '', cat: 'stickers', sub: '', d0: '', d1: '', tags: '', letter: true, variants: '', options: [{ l0: '', l1: '', price: '', stk: '' }], src: '', edit: false }; }
+  function fromProduct(p, asEdit) {
+    return {
+      id: asEdit ? p.id : '', idAuto: !asEdit, name: asEdit ? p.name : '', cat: p.cat, sub: p.sub || '', d0: p.desc ? p.desc[0] : '', d1: p.desc ? p.desc[1] : '',
+      tags: (p.tags || []).join(', '), letter: !!p.letter,
+      variants: (p.variants || []).map(function (v) { return v.it + (v.en && v.en !== v.it ? ' | ' + v.en : ''); }).join('\n'),
+      options: p.options.map(function (o) { return { l0: o.l[0], l1: o.l[1], price: String(o.price).replace('.', ','), stk: o.stk ? String(o.stk) : '' }; }),
+      src: asEdit ? '' : p.id, edit: !!asEdit
+    };
+  }
+  function suggestId() {
+    var pre = nf.src ? nf.src.split('-')[0] : (PREFIX[nf.cat] || 'prodotto'), s = slug(nf.name);
+    if (!s) return '';
+    return (s === pre || s.indexOf(pre + '-') === 0) ? s : pre + '-' + s;
+  }
+  function parseVariants() {
+    return nf.variants.split('\n').map(function (l) { var a = l.split('|'); return { it: (a[0] || '').trim(), en: (a[1] || '').trim() }; }).filter(function (v) { return v.it; });
+  }
+  function photoHint() {
+    var id = nf.id || '(codice)', l = ['img/prodotti/' + id + '.jpg   (oppure .png)'];
+    parseVariants().forEach(function (v) { l.push('img/prodotti/' + id + '-' + slug(v.it) + '.jpg   (variante ' + v.it + ')'); });
+    return l.join('\n');
+  }
+  function renderNew() {
+    if (!nf) nf = blank();
+    var cat = C.categories.filter(function (c) { return c.id === nf.cat; })[0];
+    var h = '';
+    if (nlast) {
+      h += '<div class="okbox"><b>Salvato: ' + esc(nlast.name) + '</b><br>Ora carica le foto in <b>img\\prodotti</b> con questi nomi e pubblicale (git add, commit, push):<pre class="ph">' +
+        esc(['img/prodotti/' + nlast.id + '.jpg'].concat((nlast.variants || []).map(function (v) { return 'img/prodotti/' + nlast.id + '-' + slug(v.it) + '.jpg'; })).join('\n')) +
+        '</pre>Sul sito compare entro circa un minuto, anche senza foto.</div>';
+    }
+    h += '<div class="lbl">' + (nf.edit ? 'Modifica prodotto' : 'Copia da un prodotto esistente') + '</div>';
+    if (!nf.edit) {
+      h += '<input id="nsrc" class="fld" type="search" placeholder="Cerca il prodotto da copiare\u2026" value="' + esc(nsrcq) + '" style="margin:6px 0 4px"><div class="nres" id="nres"></div>';
+      if (nf.src) h += '<p class="sub" style="margin:0 0 10px">Copiato da: <b>' + esc(nf.src) + '</b> (cambia i campi che servono)</p>';
+    }
+    h += '<label class="lbl" for="nf-name">Nome</label><input id="nf-name" class="fld" value="' + esc(nf.name) + '" style="margin:6px 0 12px" maxlength="120">' +
+      '<label class="lbl" for="nf-id">Codice (nome delle foto)</label><input id="nf-id" class="fld" value="' + esc(nf.id) + '" style="margin:6px 0 12px"' + (nf.edit ? ' disabled' : '') + ' maxlength="60" autocapitalize="off">' +
+      '<label class="lbl" for="nf-cat">Categoria</label><select id="nf-cat" class="fld" style="margin:6px 0 12px">' + C.categories.map(function (c) { return '<option value="' + c.id + '"' + (c.id === nf.cat ? ' selected' : '') + '>' + esc(c.it[0]) + '</option>'; }).join('') + '</select>';
+    if (cat && cat.subs) h += '<label class="lbl" for="nf-sub">Sottocategoria</label><select id="nf-sub" class="fld" style="margin:6px 0 12px"><option value="">-</option>' + cat.subs.map(function (s) { return '<option value="' + s.id + '"' + (s.id === nf.sub ? ' selected' : '') + '>' + esc(s.it) + '</option>'; }).join('') + '</select>';
+    h += '<label class="lbl" for="nf-d0">Descrizione italiano (facoltativa)</label><textarea id="nf-d0" class="fld" style="margin:6px 0 12px">' + esc(nf.d0) + '</textarea>' +
+      '<label class="lbl" for="nf-d1">Descrizione inglese (facoltativa)</label><textarea id="nf-d1" class="fld" style="margin:6px 0 12px">' + esc(nf.d1) + '</textarea>' +
+      '<div class="lbl">Prezzi: nome italiano, nome inglese, euro' + (nf.cat === 'stickers' ? ', n. sticker' : '') + '</div><div style="margin:6px 0">' +
+      nf.options.map(function (o, i) {
+        return '<div class="nrow"><input class="fld" data-o="' + i + ':l0" value="' + esc(o.l0) + '" placeholder="es. Tubino"><input class="fld" data-o="' + i + ':l1" value="' + esc(o.l1) + '" placeholder="es. Tube">' +
+          '<input class="fld" data-o="' + i + ':price" value="' + esc(o.price) + '" inputmode="decimal" placeholder="15">' +
+          '<input class="fld" data-o="' + i + ':stk" value="' + esc(o.stk) + '" inputmode="numeric" placeholder="n."' + (nf.cat === 'stickers' ? '' : ' disabled') + '>' +
+          '<button type="button" class="small" data-nrm="' + i + '" aria-label="Togli">\u00d7</button></div>';
+      }).join('') + '</div><button type="button" class="small" data-nadd="1">+ altro prezzo</button>' +
+      '<label class="lbl" for="nf-var" style="display:block;margin-top:14px">Varianti, una per riga (italiano | inglese). Lascia vuoto se non ce ne sono</label>' +
+      '<textarea id="nf-var" class="fld" style="margin:6px 0 12px;height:110px" placeholder="Rosso | Red">' + esc(nf.variants) + '</textarea>' +
+      '<label class="lbl" for="nf-tags">Etichette (es. nuovo, uv)</label><input id="nf-tags" class="fld" value="' + esc(nf.tags) + '" style="margin:6px 0 12px">' +
+      '<label class="rem"><input type="checkbox" id="nf-letter"' + (nf.letter ? ' checked' : '') + '> Si pu\u00f2 spedire in lettera</label>' +
+      '<div class="lbl">Foto da caricare</div><pre class="ph" id="nphoto">' + esc(photoHint()) + '</pre>' +
+      '<div class="errbox" id="nmsg" role="alert"></div>' +
+      '<button type="button" class="btn lime" data-nsave="1">' + (nf.edit ? 'Salva modifiche' : 'Salva prodotto') + '</button>' +
+      (nf.edit ? '<button type="button" class="btn" data-ncancel="1">Annulla modifica</button>' : '');
+    $('#nform').innerHTML = h;
+    renderRes(); renderExtras();
+  }
+  function renderRes() {
+    var e = $('#nres'); if (!e) return;
+    var l = nsrcq ? C.products.filter(function (p) { return norm(p.name).indexOf(norm(nsrcq)) > -1; }).slice(0, 8) : [];
+    e.innerHTML = l.map(function (p) { return '<button type="button" class="chip" data-ncopy="' + esc(p.id) + '">' + esc(p.name) + ' \u00b7 ' + esc(cats[p.cat] || '') + '</button>'; }).join('');
+  }
+  function renderExtras() {
+    $('#nlist').innerHTML = extras.length ? extras.map(function (p) {
+      return '<div class="lastx"><span>' + esc(p.name) + '<br><small style="color:#9a9a94">' + esc(p.id) + '</small></span><button type="button" class="small" data-nedit="' + esc(p.id) + '">Modifica</button><button type="button" class="small" data-ndel="' + esc(p.id) + '">Elimina</button></div>';
+    }).join('') : '<p class="sub">Nessuno per ora.</p>';
+  }
+  function buildProduct() {
+    var id = nf.id.trim().toLowerCase(), name = nf.name.trim();
+    if (!name) throw new Error('Scrivi il nome.');
+    if (!/^[a-z0-9][a-z0-9-]{2,59}$/.test(id)) throw new Error('Il codice deve avere almeno 3 caratteri: lettere minuscole, numeri e trattini.');
+    if (C.products.some(function (p) { return p.id === id && !(nf.edit && extras.some(function (x) { return x.id === id; })); })) throw new Error('Esiste gi\u00e0 un prodotto con questo codice: cambialo.');
+    var p = { id: id, name: name, cat: nf.cat, letter: nf.letter, tags: nf.tags.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean), options: [] };
+    if (nf.sub) p.sub = nf.sub;
+    if (nf.d0.trim() || nf.d1.trim()) p.desc = [nf.d0.trim() || nf.d1.trim(), nf.d1.trim() || nf.d0.trim()];
+    var vs = parseVariants(), seen = {};
+    vs.forEach(function (v) { if (v.it.indexOf('|') > -1) throw new Error('Nelle varianti non usare |.'); if (seen[v.it]) throw new Error('Variante doppia: ' + v.it); seen[v.it] = 1; });
+    if (vs.length) p.variants = vs.map(function (v) { return { it: v.it, en: v.en || v.it }; });
+    nf.options.forEach(function (o, i) {
+      var pr = Number(String(o.price).replace(',', '.'));
+      if (!(o.l0.trim() || o.l1.trim())) throw new Error('Prezzo ' + (i + 1) + ': manca il nome.');
+      if (!(pr > 0 && pr <= 1000)) throw new Error('Prezzo ' + (i + 1) + ': scrivi un importo valido.');
+      var r = { l: [o.l0.trim() || o.l1.trim(), o.l1.trim() || o.l0.trim()], price: Math.round(pr * 100) / 100 };
+      if (nf.cat === 'stickers') { var s = Math.floor(Number(o.stk)); if (!(s >= 1)) throw new Error('Prezzo ' + (i + 1) + ': indica quanti sticker.'); r.stk = s; }
+      p.options.push(r);
+    });
+    return p;
+  }
+  function postExtra(list, done) {
+    setStat('Salvataggio\u2026');
+    oapi('POST', '/admin/extra', { extra: list }).then(function (j) { extras = j.extra || []; applyExtra(); render(); setStat('Salvato \u00b7 ' + hhmm()); done(null); })
+      .catch(function (e) { setStat('NON salvato: ' + e.message, true); done(e); });
+  }
+  function saveNew() {
+    var p; try { p = buildProduct(); } catch (e) { $('#nmsg').textContent = e.message; return; }
+    var list = nf.edit ? extras.map(function (x) { return x.id === p.id ? p : x; }) : extras.concat([p]);
+    postExtra(list, function (err) { if (err) { $('#nmsg').textContent = err.message; return; } nlast = p; nf = blank(); nsrcq = ''; renderNew(); window.scrollTo(0, 0); });
+  }
+  function delExtra(id) {
+    if (!confirm('Eliminare questo prodotto dal sito?')) return;
+    postExtra(extras.filter(function (x) { return x.id !== id; }), function (err) {
+      if (err) return;
+      var n = st.off.length; st.off = st.off.filter(function (k) { return k !== id && k.indexOf(id + '|') !== 0; });
+      if (st.off.length !== n) api('POST', st).catch(function () {});
+      nlast = null; renderNew();
+    });
+  }
+  function updPhoto() { var e = $('#nphoto'); if (e) e.textContent = photoHint(); }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b || !nf && tab !== 'new') return;
+    if (b.hasAttribute('data-ncopy')) { var p = C.products.filter(function (x) { return x.id === b.getAttribute('data-ncopy'); })[0]; if (p) { nf = fromProduct(p, false); nsrcq = ''; nlast = null; renderNew(); } return; }
+    if (b.hasAttribute('data-nadd')) { if (nf.options.length < 6) nf.options.push({ l0: '', l1: '', price: '', stk: '' }); return renderNew(); }
+    if (b.hasAttribute('data-nrm')) { if (nf.options.length > 1) nf.options.splice(+b.getAttribute('data-nrm'), 1); return renderNew(); }
+    if (b.hasAttribute('data-nsave')) return saveNew();
+    if (b.hasAttribute('data-ncancel')) { nf = blank(); return renderNew(); }
+    if (b.hasAttribute('data-nedit')) { var x = extras.filter(function (y) { return y.id === b.getAttribute('data-nedit'); })[0]; if (x) { nf = fromProduct(x, true); nlast = null; renderNew(); window.scrollTo(0, 0); } return; }
+    if (b.hasAttribute('data-ndel')) return delExtra(b.getAttribute('data-ndel'));
+  });
+  document.addEventListener('input', function (e) {
+    var el = e.target, id = el.id || ''; if (!nf) return;
+    if (id === 'nsrc') { nsrcq = el.value; return renderRes(); }
+    if (id === 'nf-name') { nf.name = el.value; if (nf.idAuto && !nf.edit) { nf.id = suggestId(); $('#nf-id').value = nf.id; } return updPhoto(); }
+    if (id === 'nf-id') { nf.id = el.value.toLowerCase(); nf.idAuto = false; return updPhoto(); }
+    if (id === 'nf-d0') nf.d0 = el.value; if (id === 'nf-d1') nf.d1 = el.value; if (id === 'nf-tags') nf.tags = el.value;
+    if (id === 'nf-var') { nf.variants = el.value; updPhoto(); }
+    var o = el.getAttribute && el.getAttribute('data-o');
+    if (o) { var a = o.split(':'); nf.options[+a[0]][a[1]] = el.value; }
+  });
+  document.addEventListener('change', function (e) {
+    var el = e.target, id = el.id || ''; if (!nf) return;
+    if (id === 'nf-cat') { nf.cat = el.value; nf.sub = ''; if (nf.idAuto && !nf.edit) nf.id = suggestId(); return renderNew(); }
+    if (id === 'nf-sub') nf.sub = el.value;
+    if (id === 'nf-letter') nf.letter = el.checked;
+  });
+
 })();
 </script>
 </body>

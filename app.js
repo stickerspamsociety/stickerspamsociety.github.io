@@ -88,7 +88,11 @@
   cart = load(CART_KEY, []); shipMethod = load(SHIP_KEY, 'inpost');
   if (['inpost', 'brt', 'letter', 'letterworld'].indexOf(shipMethod) < 0) shipMethod = 'inpost';
 
+  var BASE_N = C.products.length, EXTRA_KEY = 'sss_extra';
+  function applyExtra(list) { C.products.length = BASE_N; (list || []).forEach(function (p) { if (p && p.id && p.options && !C.products.some(function (b) { return b.id === p.id; })) C.products.push(p); }); }
+  applyExtra(load(EXTRA_KEY, []));
   var byId = {}; C.products.forEach(function (p) { byId[p.id] = p; });
+  function reindex() { Object.keys(byId).forEach(function (k) { delete byId[k]; }); C.products.forEach(function (p) { byId[p.id] = p; }); }
   cart = cart.filter(function (l) { var p = byId[l.id]; return p && p.options[l.o] && (l.v < 0 || (p.variants && p.variants[l.v])); });
 
   function t(k, vars) { var s = (T[lang] && T[lang][k]) || T.it[k] || k; if (vars) for (var x in vars) s = s.replace('{' + x + '}', vars[x]); return s; }
@@ -121,7 +125,10 @@
     var ep = ((window.SITE_CONFIG || {}).checkoutEndpoint || '').replace(/\/+$/, ''); if (!ep) return;
     fetch(ep + '/status').then(function (r) { return r.json(); }).then(function (j) {
       var n = { closed: !!j.closed, mode: j.mode === 'open' ? 'open' : 'closed', msg: j.msg || '', back: j.back || '', off: Array.isArray(j.off) ? j.off : [] };
-      var changed = JSON.stringify(n) !== JSON.stringify(shopSt);
+      var ex = Array.isArray(j.extra) ? j.extra : [];
+      var exChanged = JSON.stringify(ex) !== JSON.stringify(load(EXTRA_KEY, []));
+      if (exChanged) { save(EXTRA_KEY, ex); applyExtra(ex); reindex(); cart = cart.filter(function (l) { var p = byId[l.id]; return p && p.options[l.o] && (l.v < 0 || (p.variants && p.variants[l.v])); }); save(CART_KEY, cart); }
+      var changed = exChanged || JSON.stringify(n) !== JSON.stringify(shopSt);
       shopSt = n; save(SHOPST_KEY, n);
       if (changed) { banner(); renderShop(); renderCart(); }
     }).catch(function () {});   // se non risponde: il sito resta normale

@@ -82,7 +82,7 @@
 
   // ---------- stato ----------
   var lang = 'it', cart = [], shipMethod = 'inpost', agreed = false, agreed2 = false;
-  var TERMS_V = '2026-11-23';
+  var TERMS_V = '2026-11-24';
   var TC = {
     it: {
       read: 'Ho letto i <a href="termini.html" target="_blank">termini</a> di vendita.',
@@ -359,6 +359,137 @@
     return S[shipMethod].price;
   }
 
+  // ---------- punto di ritiro InPost (FACOLTATIVO) ----------
+  // Il cliente puo' cercare e scegliere un locker o un negozio InPost, ma non e' obbligatorio.
+  // Se non sceglie, spediamo al locker piu' vicino all'indirizzo che scrive su Stripe.
+  var PK_T = {
+    it: {
+      h: 'Punto di ritiro InPost (facoltativo)',
+      hint: 'Scrivi il CAP o la citt\u00e0 e premi Cerca. Se non scegli niente, spediamo al locker pi\u00f9 vicino al tuo indirizzo.',
+      ph: 'CAP o citt\u00e0', go: 'Cerca', busy: 'Cerco i punti InPost\u2026',
+      none: 'Nessun punto trovato. Prova con un altro CAP o con la citt\u00e0.',
+      err: 'Il servizio InPost adesso non risponde. Nessun problema: puoi pagare lo stesso e scrivere il punto nella pagina di pagamento.',
+      found: '{n} punti trovati', many: 'ce ne sono altri: scrivi il CAP per vedere i pi\u00f9 vicini',
+      pick: 'Scegli', chosen: 'Ritiro scelto', change: 'Cambia', keep: 'Tieni questo', clear: 'Togli',
+      locker: 'Locker', shop: 'Negozio', h24: 'Aperto 24 ore su 24', info: 'Informazioni',
+      i1: 'Non trovi il locker o il punto? Se conosci per certo un tabaccaio o un negozio vicino a te che riceve pacchi InPost, scrivilo nella pagina di pagamento, nel campo \u201cLocker o punto InPost\u201d. In ogni caso spediamo al locker pi\u00f9 vicino e disponibile all\u2019indirizzo che ci dai.',
+      i2b: 'Se qualcosa non torna',
+      i2: 'Se il punto indicato \u00e8 sbagliato ti scriviamo. Se entro 48 ore non riceviamo risposta, n\u00e9 per email n\u00e9 su Instagram, annulliamo l\u2019ordine e ti rimborsiamo.'
+    },
+    en: {
+      h: 'InPost pickup point (optional)',
+      hint: 'Type the postcode or the city and press Search. If you don\u2019t choose, we ship to the locker closest to your address.',
+      ph: 'Postcode or city', go: 'Search', busy: 'Looking for InPost points\u2026',
+      none: 'No points found. Try another postcode or the city.',
+      err: 'The InPost service is not answering right now. No problem: you can still pay and write the point on the payment page.',
+      found: '{n} points found', many: 'there are more: type the postcode to see the closest ones',
+      pick: 'Choose', chosen: 'Pickup chosen', change: 'Change', keep: 'Keep this one', clear: 'Remove',
+      locker: 'Locker', shop: 'Shop', h24: 'Open 24/7', info: 'Info',
+      i1: 'Can\u2019t find the locker or point? If you know for sure a tobacco shop or a store near you that receives InPost parcels, write it on the payment page, in the \u201cInPost locker or point\u201d field. In any case we ship to the closest available locker at the address you give us.',
+      i2b: 'If something is wrong',
+      i2: 'If the point you gave is wrong we will write to you. If we get no answer within 48 hours, by email or on Instagram, we cancel the order and refund you.'
+    }
+  };
+  function pk(k, vars) { var s = (PK_T[lang === 'en' ? 'en' : 'it'] || PK_T.it)[k] || k; if (vars) for (var x in vars) s = s.replace('{' + x + '}', vars[x]); return s; }
+  var PICK_KEY = 'ssc_pickup', PTS_API = 'https://api-it-local-points.easypack24.net/v1/points';
+  var pickup = load(PICK_KEY, null);
+  if (!pickup || typeof pickup.code !== 'string' || !pickup.code) pickup = null;
+  var pickQ = '', pickRes = null, pickCut = false, pickState = 'idle', pickOpen = false, pickReq = 0, pkI1 = false, pkI2 = false;
+
+  function pkNorm(x) {
+    var a = x.address_details || {}, ty = x.type || [];
+    return {
+      code: String(x.name || ''),
+      kind: ty.indexOf('parcel_locker') > -1 ? 'locker' : 'shop',
+      where: String(x.location_description || '').replace(/^at\s+/i, ''),
+      street: [a.street, a.building_number].filter(Boolean).join(' '),
+      zip: String(a.post_code || ''), city: String(a.city || ''), prov: String(a.province || ''),
+      hours: x.location_247 ? 'h24' : String(x.opening_hours || '')
+    };
+  }
+  function pkFetch(params) {
+    return fetch(PTS_API + '?' + params + '&per_page=100').then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.json();
+    }).then(function (j) { return { items: Array.isArray(j.items) ? j.items : [], count: +j.count || 0 }; });
+  }
+  function pkSearch() {
+    var q = pickQ.replace(/\s+/g, ' ').trim();
+    if (!q) return;
+    var zip = /^\d{5}$/.test(q), base = zip ? 'post_code=' + q : 'city=' + encodeURIComponent(q), id = ++pickReq;
+    pickState = 'busy'; pickRes = null; renderPick();
+    Promise.all([pkFetch(base + '&type=parcel_locker'), pkFetch(base + '&type=pop')]).then(function (r) {
+      if (id !== pickReq) return;
+      var seen = {}, list = [];
+      r[0].items.concat(r[1].items).forEach(function (x) {
+        var p = pkNorm(x);
+        if (x.status !== 'Operating' || !p.code || seen[p.code]) return;
+        if (zip && p.zip !== q) return;
+        seen[p.code] = 1; list.push(p);
+      });
+      list.sort(function (a, b) { return a.zip < b.zip ? -1 : a.zip > b.zip ? 1 : a.street.localeCompare(b.street, 'it'); });
+      pickRes = list; pickCut = r[0].count > 100 || r[1].count > 100; pickState = 'done'; renderPick();
+    }).catch(function () { if (id !== pickReq) return; pickState = 'error'; renderPick(); });
+  }
+  function pkZipCity(p) { return [p.zip, p.city].filter(Boolean).join(' ') + (p.prov ? ' (' + p.prov + ')' : ''); }
+  function pkTag(p) { return '<span class="pk-tag">' + esc(p.kind === 'locker' ? pk('locker') : pk('shop')) + '</span>'; }
+  function pkItem(p, i) {
+    var hrs = p.hours === 'h24' ? pk('h24') : p.hours;
+    return '<li><div class="pk-info"><div class="pk-street">' + esc(p.street || '\u2014') + '</div>' +
+      '<div class="pk-meta">' + esc(pkZipCity(p)) + '</div>' +
+      '<div class="pk-meta">' + pkTag(p) + esc(p.where) + '</div>' +
+      (hrs ? '<div class="pk-meta">' + esc(hrs) + '</div>' : '') + '</div>' +
+      '<button type="button" class="pk-pick" data-pk="pick" data-i="' + i + '">' + esc(pk('pick')) + '</button></li>';
+  }
+  function renderPick() {
+    var el = $('#pick'); if (!el) return;
+    var head = '<div class="pk-h"><span>' + esc(pk('h')) + '</span><button type="button" class="pk-i" data-pk="i1" aria-expanded="' + pkI1 + '" aria-label="' + esc(pk('info')) + '">i</button></div>' +
+      (pkI1 ? '<p class="pk-note">' + esc(pk('i1')) + '</p>' : '');
+    var tail = '<button type="button" class="pk-more" data-pk="i2" aria-expanded="' + pkI2 + '"><span class="pk-i">i</span>' + esc(pk('i2b')) + '</button>' +
+      (pkI2 ? '<p class="pk-note">' + esc(pk('i2')) + '</p>' : '');
+    if (pickup && !pickOpen) {
+      el.innerHTML = head + '<div class="pk-sel"><div class="pk-info"><div class="pk-lbl">' + esc(pk('chosen')) + '</div>' +
+        '<div class="pk-street">' + esc(pickup.street || '\u2014') + '</div><div class="pk-meta">' + esc(pkZipCity(pickup)) + '</div>' +
+        '<div class="pk-meta">' + pkTag(pickup) + esc(pickup.where) + '</div></div>' +
+        '<div class="pk-btns"><button type="button" class="pk-pick" data-pk="change">' + esc(pk('change')) + '</button>' +
+        '<button type="button" class="rm" data-pk="clear">' + esc(pk('clear')) + '</button></div></div>' + tail;
+      return;
+    }
+    var h = head + '<div class="pk-hint">' + esc(pk('hint')) + '</div>' +
+      '<div class="pk-form"><input id="pkq" class="pk-in" type="text" inputmode="search" autocomplete="off" placeholder="' + esc(pk('ph')) + '" aria-label="' + esc(pk('ph')) + '" value="' + esc(pickQ) + '">' +
+      '<button type="button" class="pk-go" data-pk="go">' + esc(pk('go')) + '</button></div>';
+    if (pickup) h += '<button type="button" class="rm" data-pk="keep">' + esc(pk('keep')) + '</button>';
+    if (pickState === 'busy') h += '<div class="pk-msg" role="status">' + esc(pk('busy')) + '</div>';
+    else if (pickState === 'error') h += '<div class="pk-msg bad" role="alert">' + esc(pk('err')) + '</div>';
+    else if (pickState === 'done') {
+      if (!pickRes.length) h += '<div class="pk-msg" role="status">' + esc(pk('none')) + '</div>';
+      else h += '<div class="pk-msg" role="status">' + esc(pk('found', { n: pickRes.length })) + (pickCut ? ' \u00b7 ' + esc(pk('many')) : '') + '</div><ul class="pk-list">' + pickRes.map(pkItem).join('') + '</ul>';
+    }
+    el.innerHTML = h + tail;
+  }
+  function pickPayload() {
+    if (shipMethod !== 'inpost' || !pickup) return undefined;
+    function c(s) { return String(s || '').slice(0, 120); }
+    return { code: c(pickup.code), kind: pickup.kind, name: c(pickup.where), street: c(pickup.street), zip: c(pickup.zip), city: c(pickup.city), prov: c(pickup.prov) };
+  }
+  $('#cartFoot').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-pk]') : null; if (!b) return;
+    var a = b.getAttribute('data-pk');
+    if (a === 'go') { var inp = $('#pkq'); if (inp) pickQ = inp.value; pkSearch(); }
+    else if (a === 'pick') {
+      var p = pickRes && pickRes[+b.getAttribute('data-i')]; if (!p) return;
+      pickup = { code: p.code, kind: p.kind, where: p.where, street: p.street, zip: p.zip, city: p.city, prov: p.prov, hours: p.hours };
+      save(PICK_KEY, pickup); pickOpen = false; renderPick();
+    }
+    else if (a === 'change') { pickOpen = true; renderPick(); }
+    else if (a === 'keep') { pickOpen = false; renderPick(); }
+    else if (a === 'clear') { pickup = null; save(PICK_KEY, null); pickOpen = false; renderPick(); }
+    else if (a === 'i1') { pkI1 = !pkI1; renderPick(); }
+    else if (a === 'i2') { pkI2 = !pkI2; renderPick(); }
+  });
+  $('#cartFoot').addEventListener('input', function (e) { if (e.target.id === 'pkq') pickQ = e.target.value; });
+  $('#cartFoot').addEventListener('keydown', function (e) { if (e.target.id === 'pkq' && e.key === 'Enter') { e.preventDefault(); pickQ = e.target.value; pkSearch(); } });
+
   function renderCart() {
     var n = count(), sub = subtotal();
     $('#cartCount').textContent = n; $('#tabCount').textContent = n; $('#tabTotal').textContent = money(sub);
@@ -392,7 +523,7 @@
         m('brt', t('m_brt'), brtP, t('m_brt_s')) +
         m('letter', t('m_letter'), S.letter.price, lokIT ? t('m_letter_s') : t('m_letter_off'), !lokIT) +
         m('letterworld', t('m_world'), letterCfg('letterworld').price, lokW ? t('m_world_s') : t('m_world_off'), !lokW) +
-      '</div>' + bar +
+      '</div>' + (shipMethod === 'inpost' ? '<div class="pick" id="pick"></div>' : '') + bar +
       '<div class="sum"><span>' + esc(t('subtotal')) + '</span><span>' + money(sub) + '</span></div>' +
       '<div class="sum"><span>' + esc(t('shipping')) + '</span><span>' + (cost === 0 ? esc(t('free')) : money(cost)) + '</span></div>' +
       '<div class="sum tot"><span>' + esc(t('total')) + '</span><span>' + money(tot) + '</span></div>' +
@@ -403,7 +534,7 @@
     $$('input[name=ship]', foot).forEach(function (r) { r.addEventListener('change', function () { shipMethod = r.value; agreed2 = false; save(SHIP_KEY, shipMethod); renderCart(); }); });
     $('#agree').addEventListener('change', function (e) { agreed = e.target.checked; });
     $('#agree2').addEventListener('change', function (e) { agreed2 = e.target.checked; });
-    $('#payBtn').addEventListener('click', checkout);
+    $('#payBtn').addEventListener('click', checkout); if (shipMethod === 'inpost') renderPick();
   }
 
   function checkout() {
@@ -416,7 +547,7 @@
     btn.disabled = true; btn.textContent = t('wait');
     fetch(CFG.checkoutEndpoint, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cart.map(function (l) { return { id: l.id, v: l.v, o: l.o, q: l.q }; }), shipping: shipMethod, lang: lang, consent: { read: true, understood: true, v: TERMS_V } })
+      body: JSON.stringify({ items: cart.map(function (l) { return { id: l.id, v: l.v, o: l.o, q: l.q }; }), shipping: shipMethod, lang: lang, consent: { read: true, understood: true, v: TERMS_V }, pickup: pickPayload() })
     }).then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.url) throw new Error(j.error || 'err'); return j; }); })
       .then(function (j) { window.location.href = j.url; })
       .catch(function (e) { err.textContent = t('e_fail') + (e && e.message && e.message !== 'err' ? ' (' + e.message + ')' : ''); btn.disabled = false; btn.textContent = t('pay'); });

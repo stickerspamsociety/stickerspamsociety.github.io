@@ -404,7 +404,7 @@
       where: String(x.location_description || '').replace(/^at\s+/i, ''),
       street: [a.street, a.building_number].filter(Boolean).join(' '),
       zip: String(a.post_code || ''), city: String(a.city || ''), prov: String(a.province || ''),
-      hours: x.location_247 ? 'h24' : String(x.opening_hours || '')
+      hours: x.location_247 ? 'h24' : String(x.opening_hours || ''), dist: +x.distance || 0
     };
   }
   function pkFetch(params) {
@@ -413,10 +413,13 @@
       return r.json();
     }).then(function (j) { return { items: Array.isArray(j.items) ? j.items : [], count: +j.count || 0 }; });
   }
+  function pkKm(m) { return m < 1000 ? Math.max(10, Math.round(m / 10) * 10) + ' m' : (m / 1000).toFixed(1).replace('.', lang === 'en' ? '.' : ',') + ' km'; }
+  function pkCity(q) { return q.toLowerCase().replace(/(^|[\s'\-])([a-z\u00e0-\u00fc])/g, function (a, b, c) { return b + c.toUpperCase(); }).replace(/ (Di|Del|Della|Dei|Delle|De|In|Nel|Nell|Nella|Sul|Sull|Sulla|Al|Alla|Allo|E|Ed|A|Da|Dal|Sopra|Sotto)(?=[ ']|$)/g, function (a) { return a.toLowerCase(); }); }
   function pkSearch() {
     var q = pickQ.replace(/\s+/g, ' ').trim();
     if (!q) return;
-    var zip = /^\d{5}$/.test(q), base = zip ? 'post_code=' + q : 'city=' + encodeURIComponent(q), id = ++pickReq;
+    var zip = /^\d{5}$/.test(q), id = ++pickReq;
+    var base = zip ? 'relative_post_code=' + q + '&max_distance=8000' : 'city=' + encodeURIComponent(pkCity(q));
     pickState = 'busy'; pickRes = null; renderPick();
     Promise.all([pkFetch(base + '&type=parcel_locker'), pkFetch(base + '&type=pop')]).then(function (r) {
       if (id !== pickReq) return;
@@ -424,11 +427,12 @@
       r[0].items.concat(r[1].items).forEach(function (x) {
         var p = pkNorm(x);
         if (x.status !== 'Operating' || !p.code || seen[p.code]) return;
-        if (zip && p.zip !== q) return;
         seen[p.code] = 1; list.push(p);
       });
-      list.sort(function (a, b) { return a.zip < b.zip ? -1 : a.zip > b.zip ? 1 : a.street.localeCompare(b.street, 'it'); });
-      pickRes = list; pickCut = r[0].count > 100 || r[1].count > 100; pickState = 'done'; renderPick();
+      if (zip) list.sort(function (a, b) { return a.dist - b.dist; });
+      else list.sort(function (a, b) { return a.zip < b.zip ? -1 : a.zip > b.zip ? 1 : a.street.localeCompare(b.street, 'it'); });
+      pickCut = !zip && (r[0].count > 100 || r[1].count > 100);
+      pickRes = zip ? list.slice(0, 20) : list; pickState = 'done'; renderPick();
     }).catch(function () { if (id !== pickReq) return; pickState = 'error'; renderPick(); });
   }
   function pkZipCity(p) { return [p.zip, p.city].filter(Boolean).join(' ') + (p.prov ? ' (' + p.prov + ')' : ''); }
@@ -436,7 +440,7 @@
   function pkItem(p, i) {
     var hrs = p.hours === 'h24' ? pk('h24') : p.hours;
     return '<li><div class="pk-info"><div class="pk-street">' + esc(p.street || '\u2014') + '</div>' +
-      '<div class="pk-meta">' + esc(pkZipCity(p)) + '</div>' +
+      '<div class="pk-meta">' + esc(pkZipCity(p)) + (p.dist ? ' \u00b7 ' + pkKm(p.dist) : '') + '</div>' +
       '<div class="pk-meta">' + pkTag(p) + esc(p.where) + '</div>' +
       (hrs ? '<div class="pk-meta">' + esc(hrs) + '</div>' : '') + '</div>' +
       '<button type="button" class="pk-pick" data-pk="pick" data-i="' + i + '">' + esc(pk('pick')) + '</button></li>';
@@ -550,8 +554,8 @@
     if (cart.some(function (l) { return isOff(byId[l.id], l.v); })) { toast(tx('cart_off')); return; }
     var err = $('#err'), btn = $('#payBtn'); err.textContent = '';
     if (shipMethod === 'inpost' && !pickup) { err.textContent = pk('e_pick'); pickOpen = true; renderPick(); pkSmack(); var pkb = $('#pick'); if (pkb && pkb.scrollIntoView) pkb.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
-    if (!$('#agree').checked) { err.textContent = tc('e1'); return; }
-    if (!$('#agree2').checked) { err.textContent = tc('e2'); return; }
+    if (!$('#agree').checked) { err.textContent = tc('e1'); pkSmack(); return; }
+    if (!$('#agree2').checked) { err.textContent = tc('e2'); pkSmack(); return; }
     if (!CFG.checkoutEndpoint) { err.textContent = t('e_unset'); return; }
     btn.disabled = true; btn.textContent = t('wait');
     fetch(CFG.checkoutEndpoint, {

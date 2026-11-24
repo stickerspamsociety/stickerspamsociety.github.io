@@ -300,3 +300,7 @@ footer a { margin: 0 10px; text-decoration: underline; }
 @keyframes pk-smack { 0% { transform: translate(-50%, -50%) scale(.2) rotate(-8deg); opacity: 0; } 25% { transform: translate(-50%, -50%) scale(2.3) rotate(2deg); opacity: 1; } 31% { transform: translate(-50%, -50%) scale(2.05) rotate(-3deg); } 36% { transform: translate(-48%, -52%) scale(2.12) rotate(3deg); } 41% { transform: translate(-52%, -49%) scale(2.08) rotate(-2deg); } 46% { transform: translate(-50%, -50%) scale(2.1) rotate(0); } 70% { transform: translate(-50%, -50%) scale(2.1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(0); opacity: 0; } }
 .pk-flash { position: fixed; inset: 0; z-index: 199; background: #fff; pointer-events: none; opacity: 0; animation: pk-fl .6s ease-out forwards; }
 @keyframes pk-fl { 0%, 22% { opacity: 0; } 26% { opacity: .55; } 100% { opacity: 0; } }
+
+/* InPost: una sola barra di scorrimento nel carrello (niente lista che scorre dentro un'altra) */
+.pk-list { max-height: none; overflow: visible; }
+@media (max-width: 640px) { .dr-foot { max-height: 74vh; max-height: 74dvh; } .dr-body { min-height: 90px; } }

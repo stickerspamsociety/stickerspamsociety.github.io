@@ -312,3 +312,6 @@ footer a { margin: 0 10px; text-decoration: underline; }
 .pk-sug-b { display: block; width: 100%; min-height: 44px; text-align: left; background: none; border: 0; padding: 10px 12px; cursor: pointer; font-size: .95rem; text-transform: uppercase; }
 .pk-sug-b span { font-weight: 400; color: var(--mute); }
 .pk-sug-b:hover, .pk-sug-b:focus-visible { background: var(--bg2); box-shadow: inset 4px 0 0 var(--acid); }
+
+/* InPost: casella per filtrare la lista per via */
+.pk-f { display: block; width: 100%; margin-top: 8px; }

@@ -374,7 +374,8 @@
       i1: 'Scrivi il CAP o la citt\u00e0 e scegli dalla lista il locker o il negozio InPost dove vuoi ritirare il pacco.',
       i2b: 'Se c\u2019\u00e8 un problema',
       i2: 'Se un errore grave ci impedisce di spedire, ti mandiamo una email. Se entro 48 ore non rispondi, annulliamo l\u2019ordine e ti rimborsiamo.',
-      e_pick: 'Scegli dalla lista il punto InPost dove ritirare il pacco.'
+      e_pick: 'Scegli dalla lista il punto InPost dove ritirare il pacco.',
+      filter: 'Filtra per via'
     },
     en: {
       h: 'Choose your InPost pickup point',
@@ -387,7 +388,8 @@
       i1: 'Type the postcode or the city and choose from the list the InPost locker or shop where you want to pick up your parcel.',
       i2b: 'If there is a problem',
       i2: 'If a serious error stops us from shipping, we send you an email. If you don\u2019t answer within 48 hours, we cancel the order and refund you.',
-      e_pick: 'Choose from the list the InPost point where you want to pick up your parcel.'
+      e_pick: 'Choose from the list the InPost point where you want to pick up your parcel.',
+      filter: 'Filter by street'
     }
   };
   function pk(k, vars) { var s = (PK_T[lang === 'en' ? 'en' : 'it'] || PK_T.it)[k] || k; if (vars) for (var x in vars) s = s.replace('{' + x + '}', vars[x]); return s; }
@@ -408,7 +410,7 @@
     };
   }
   function pkFetch(params) {
-    return fetch(PTS_API + '?' + params + '&per_page=100').then(function (r) {
+    return fetch(PTS_API + '?' + params + '&per_page=100&limit=100').then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
     }).then(function (j) { return { items: Array.isArray(j.items) ? j.items : [], count: +j.count || 0 }; });
@@ -416,7 +418,7 @@
   function pkKm(m) { return m < 1000 ? Math.max(10, Math.round(m / 10) * 10) + ' m' : (m / 1000).toFixed(1).replace('.', lang === 'en' ? '.' : ',') + ' km'; }
   function pkCity(q) { return q.toLowerCase().replace(/(^|[\s'\-])([a-z\u00e0-\u00fc])/g, function (a, b, c) { return b + c.toUpperCase(); }).replace(/ (Di|Del|Della|Dei|Delle|De|In|Nel|Nell|Nella|Sul|Sull|Sulla|Al|Alla|Allo|E|Ed|A|Da|Dal|Sopra|Sotto)(?=[ ']|$)/g, function (a) { return a.toLowerCase(); }); }
   // elenco dei comuni italiani (data/comuni.json, Garda Informatica, licenza MIT): caricato solo quando serve
-  var PK_COM = null, pkComBusy = false, pkComCb = null, pickSug = [];
+  var PK_COM = null, pkComBusy = false, pkComCb = null, pickSug = [], pickF = '', pickNear = false;
   function pkKey(s) { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
   function pkLoadComuni(cb) {
     if (PK_COM) { if (cb) cb(); return; }
@@ -470,8 +472,15 @@
       if (near) list.sort(function (a, b) { return a.dist - b.dist; });
       else list.sort(function (a, b) { return a.zip < b.zip ? -1 : a.zip > b.zip ? 1 : a.street.localeCompare(b.street, 'it'); });
       pickCut = !near && (r[0].count > 100 || r[1].count > 100);
-      pickRes = near ? list.slice(0, 20) : list; pickState = 'done'; renderPick();
+      pickRes = list; pickNear = near; pickF = ''; pickState = 'done'; renderPick();
     }).catch(function () { if (id !== pickReq) return; pickState = 'error'; renderPick(); });
+  }
+  function pkListHtml() {
+    var f = pkKey(pickF), all = pickRes.map(function (p, i) { return { p: p, i: i }; });
+    if (f) all = all.filter(function (o) { return pkKey([o.p.street, o.p.where, o.p.city, o.p.zip].join(' ')).indexOf(f) > -1; });
+    else if (pickNear) all = all.slice(0, 50);
+    return '<div class="pk-msg" role="status">' + esc(pk('found', { n: all.length })) + (pickCut && !f ? ' \u00b7 ' + esc(pk('many')) : '') + '</div>' +
+      (all.length ? '<ul class="pk-list">' + all.map(function (o) { return pkItem(o.p, o.i); }).join('') + '</ul>' : '');
   }
   function pkZipCity(p) { return [p.zip, p.city].filter(Boolean).join(' ') + (p.prov ? ' (' + p.prov + ')' : ''); }
   function pkTag(p) { return '<span class="pk-tag">' + esc(p.kind === 'locker' ? pk('locker') : pk('shop')) + '</span>'; }
@@ -506,7 +515,7 @@
     else if (pickState === 'error') h += '<div class="pk-msg bad" role="alert">' + esc(pk('err')) + '</div>';
     else if (pickState === 'done') {
       if (!pickRes.length) h += '<div class="pk-msg" role="status">' + esc(pk('none')) + '</div>';
-      else h += '<div class="pk-msg" role="status">' + esc(pk('found', { n: pickRes.length })) + (pickCut ? ' \u00b7 ' + esc(pk('many')) : '') + '</div><ul class="pk-list">' + pickRes.map(pkItem).join('') + '</ul>';
+      else h += '<input id="pkf" class="pk-in pk-f" type="text" inputmode="search" autocomplete="off" placeholder="' + esc(pk('filter')) + '" aria-label="' + esc(pk('filter')) + '" value="' + esc(pickF) + '"><div id="pkwrap">' + pkListHtml() + '</div>';
     }
     el.innerHTML = h + tail;
   }
@@ -540,6 +549,7 @@
     else if (a === 'i2') { pkI2 = !pkI2; renderPick(); }
   });
   $('#cartFoot').addEventListener('input', function (e) {
+    if (e.target.id === 'pkf') { pickF = e.target.value; var w = $('#pkwrap'); if (w) w.innerHTML = pkListHtml(); return; }
     if (e.target.id !== 'pkq') return;
     pickQ = e.target.value;
     var v = pickQ.trim();

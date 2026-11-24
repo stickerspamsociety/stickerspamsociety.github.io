@@ -82,7 +82,7 @@
 
   // ---------- stato ----------
   var lang = 'it', cart = [], shipMethod = 'inpost', agreed = false, agreed2 = false;
-  var TERMS_V = '2026-11-24';
+  var TERMS_V = '2026-11-24b';
   var TC = {
     it: {
       read: 'Ho letto i <a href="termini.html" target="_blank">termini</a> di vendita.',
@@ -364,30 +364,30 @@
   // Se non sceglie, spediamo al locker piu' vicino all'indirizzo che scrive su Stripe.
   var PK_T = {
     it: {
-      h: 'Punto di ritiro InPost (facoltativo)',
-      hint: 'Scrivi il CAP o la citt\u00e0 e premi Cerca. Se non scegli niente, spediamo al locker pi\u00f9 vicino al tuo indirizzo.',
+      h: 'Scegli il punto di ritiro InPost',
       ph: 'CAP o citt\u00e0', go: 'Cerca', busy: 'Cerco i punti InPost\u2026',
       none: 'Nessun punto trovato. Prova con un altro CAP o con la citt\u00e0.',
-      err: 'Il servizio InPost adesso non risponde. Nessun problema: puoi pagare lo stesso e scrivere il punto nella pagina di pagamento.',
+      err: 'Il servizio InPost adesso non risponde. Riprova tra poco oppure scegli BRT / SDA.',
       found: '{n} punti trovati', many: 'ce ne sono altri: scrivi il CAP per vedere i pi\u00f9 vicini',
       pick: 'Scegli', chosen: 'Ritiro scelto', change: 'Cambia', keep: 'Tieni questo', clear: 'Togli',
       locker: 'Locker', shop: 'Negozio', h24: 'Aperto 24 ore su 24', info: 'Informazioni',
-      i1: 'Non trovi il locker o il punto? Se conosci per certo un tabaccaio o un negozio vicino a te che riceve pacchi InPost, scrivilo nella pagina di pagamento, nel campo \u201cLocker o punto InPost\u201d. In ogni caso spediamo al locker pi\u00f9 vicino e disponibile all\u2019indirizzo che ci dai.',
-      i2b: 'Se qualcosa non torna',
-      i2: 'Se il punto indicato \u00e8 sbagliato ti scriviamo. Se entro 48 ore non riceviamo risposta, n\u00e9 per email n\u00e9 su Instagram, annulliamo l\u2019ordine e ti rimborsiamo.'
+      i1: 'Scrivi il CAP o la citt\u00e0 e scegli dalla lista il locker o il negozio InPost dove vuoi ritirare il pacco.',
+      i2b: 'Se c\u2019\u00e8 un problema',
+      i2: 'Se un errore grave ci impedisce di spedire, ti mandiamo una email. Se entro 48 ore non rispondi, annulliamo l\u2019ordine e ti rimborsiamo.',
+      e_pick: 'Scegli dalla lista il punto InPost dove ritirare il pacco.'
     },
     en: {
-      h: 'InPost pickup point (optional)',
-      hint: 'Type the postcode or the city and press Search. If you don\u2019t choose, we ship to the locker closest to your address.',
+      h: 'Choose your InPost pickup point',
       ph: 'Postcode or city', go: 'Search', busy: 'Looking for InPost points\u2026',
       none: 'No points found. Try another postcode or the city.',
-      err: 'The InPost service is not answering right now. No problem: you can still pay and write the point on the payment page.',
+      err: 'The InPost service is not answering right now. Try again in a moment or choose BRT / SDA.',
       found: '{n} points found', many: 'there are more: type the postcode to see the closest ones',
       pick: 'Choose', chosen: 'Pickup chosen', change: 'Change', keep: 'Keep this one', clear: 'Remove',
       locker: 'Locker', shop: 'Shop', h24: 'Open 24/7', info: 'Info',
-      i1: 'Can\u2019t find the locker or point? If you know for sure a tobacco shop or a store near you that receives InPost parcels, write it on the payment page, in the \u201cInPost locker or point\u201d field. In any case we ship to the closest available locker at the address you give us.',
-      i2b: 'If something is wrong',
-      i2: 'If the point you gave is wrong we will write to you. If we get no answer within 48 hours, by email or on Instagram, we cancel the order and refund you.'
+      i1: 'Type the postcode or the city and choose from the list the InPost locker or shop where you want to pick up your parcel.',
+      i2b: 'If there is a problem',
+      i2: 'If a serious error stops us from shipping, we send you an email. If you don\u2019t answer within 48 hours, we cancel the order and refund you.',
+      e_pick: 'Choose from the list the InPost point where you want to pick up your parcel.'
     }
   };
   function pk(k, vars) { var s = (PK_T[lang === 'en' ? 'en' : 'it'] || PK_T.it)[k] || k; if (vars) for (var x in vars) s = s.replace('{' + x + '}', vars[x]); return s; }
@@ -455,8 +455,8 @@
         '<button type="button" class="rm" data-pk="clear">' + esc(pk('clear')) + '</button></div></div>' + tail;
       return;
     }
-    var h = head + '<div class="pk-hint">' + esc(pk('hint')) + '</div>' +
-      '<div class="pk-form"><input id="pkq" class="pk-in" type="text" inputmode="search" autocomplete="off" placeholder="' + esc(pk('ph')) + '" aria-label="' + esc(pk('ph')) + '" value="' + esc(pickQ) + '">' +
+    var h = head +
+      '<div class="pk-form"><input id="pkq" class="pk-in" type="text" inputmode="search" autocomplete="postal-code" placeholder="' + esc(pk('ph')) + '" aria-label="' + esc(pk('ph')) + '" value="' + esc(pickQ) + '">' +
       '<button type="button" class="pk-go" data-pk="go">' + esc(pk('go')) + '</button></div>';
     if (pickup) h += '<button type="button" class="rm" data-pk="keep">' + esc(pk('keep')) + '</button>';
     if (pickState === 'busy') h += '<div class="pk-msg" role="status">' + esc(pk('busy')) + '</div>';
@@ -466,6 +466,14 @@
       else h += '<div class="pk-msg" role="status">' + esc(pk('found', { n: pickRes.length })) + (pickCut ? ' \u00b7 ' + esc(pk('many')) : '') + '</div><ul class="pk-list">' + pickRes.map(pkItem).join('') + '</ul>';
     }
     el.innerHTML = h + tail;
+  }
+  function pkSmack() {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var old = document.querySelectorAll('.pk-smack, .pk-flash'); for (var i = 0; i < old.length; i++) old[i].remove();
+    var fl = document.createElement('div'); fl.className = 'pk-flash';
+    var im = document.createElement('img'); im.className = 'pk-smack'; im.alt = ''; im.src = 'img/errore-faccia.jpg';
+    document.body.appendChild(fl); document.body.appendChild(im);
+    setTimeout(function () { fl.remove(); im.remove(); }, 1300);
   }
   function pickPayload() {
     if (shipMethod !== 'inpost' || !pickup) return undefined;
@@ -541,6 +549,7 @@
     if (shopClosed()) { toast(tx('closed_cart')); return; }
     if (cart.some(function (l) { return isOff(byId[l.id], l.v); })) { toast(tx('cart_off')); return; }
     var err = $('#err'), btn = $('#payBtn'); err.textContent = '';
+    if (shipMethod === 'inpost' && !pickup) { err.textContent = pk('e_pick'); pickOpen = true; renderPick(); pkSmack(); var pkb = $('#pick'); if (pkb && pkb.scrollIntoView) pkb.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
     if (!$('#agree').checked) { err.textContent = tc('e1'); return; }
     if (!$('#agree2').checked) { err.textContent = tc('e2'); return; }
     if (!CFG.checkoutEndpoint) { err.textContent = t('e_unset'); return; }

@@ -304,3 +304,11 @@ footer a { margin: 0 10px; text-decoration: underline; }
 /* InPost: una sola barra di scorrimento nel carrello (niente lista che scorre dentro un'altra) */
 .pk-list { max-height: none; overflow: visible; }
 @media (max-width: 640px) { .dr-foot { max-height: 74vh; max-height: 74dvh; } .dr-body { min-height: 90px; } }
+
+/* InPost: suggerimenti delle citta' mentre si scrive */
+.pk-sug { list-style: none; margin: 4px 0 0; padding: 0; border: 2px solid var(--line); background: var(--bg); }
+.pk-sug:empty { display: none; }
+.pk-sug li + li { border-top: 1px solid var(--line); }
+.pk-sug-b { display: block; width: 100%; min-height: 44px; text-align: left; background: none; border: 0; padding: 10px 12px; cursor: pointer; font-size: .95rem; text-transform: uppercase; }
+.pk-sug-b span { font-weight: 400; color: var(--mute); }
+.pk-sug-b:hover, .pk-sug-b:focus-visible { background: var(--bg2); box-shadow: inset 4px 0 0 var(--acid); }

@@ -415,11 +415,49 @@
   }
   function pkKm(m) { return m < 1000 ? Math.max(10, Math.round(m / 10) * 10) + ' m' : (m / 1000).toFixed(1).replace('.', lang === 'en' ? '.' : ',') + ' km'; }
   function pkCity(q) { return q.toLowerCase().replace(/(^|[\s'\-])([a-z\u00e0-\u00fc])/g, function (a, b, c) { return b + c.toUpperCase(); }).replace(/ (Di|Del|Della|Dei|Delle|De|In|Nel|Nell|Nella|Sul|Sull|Sulla|Al|Alla|Allo|E|Ed|A|Da|Dal|Sopra|Sotto)(?=[ ']|$)/g, function (a) { return a.toLowerCase(); }); }
-  function pkSearch() {
+  // elenco dei comuni italiani (data/comuni.json, Garda Informatica, licenza MIT): caricato solo quando serve
+  var PK_COM = null, pkComBusy = false, pkComCb = null, pickSug = [];
+  function pkKey(s) { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
+  function pkLoadComuni(cb) {
+    if (PK_COM) { if (cb) cb(); return; }
+    if (cb) pkComCb = cb;
+    if (pkComBusy) return; pkComBusy = true;
+    fetch('data/comuni.json').then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); }).then(function (a) {
+      PK_COM = a.map(function (s) { var f = s.split('|'); return { n: f[0], p: f[1], lat: +f[2], lon: +f[3], k: pkKey(f[0]), k2: pkKey(f[0].split('/')[0]) }; });
+      pkComBusy = false; var f = pkComCb; pkComCb = null; if (f) f();
+    }).catch(function () { pkComBusy = false; });
+  }
+  function pkSplit(q) { var m = /^(.*?)\s*\(([A-Za-z]{2})\)\s*$/.exec(q); return m ? { k: pkKey(m[1]), p: m[2].toUpperCase() } : { k: pkKey(q), p: '' }; }
+  function pkSuggest(q) {
+    var s = pkSplit(q), k = s.k;
+    if (!PK_COM || k.length < 2 || /^\d+$/.test(k)) return [];
+    var a = [], b = [];
+    for (var i = 0; i < PK_COM.length && a.length < 8; i++) {
+      var c = PK_COM[i];
+      if (s.p && c.p !== s.p) continue;
+      if (c.k.indexOf(k) === 0) a.push(c); else if (b.length < 8 && c.k.indexOf(' ' + k) > -1) b.push(c);
+    }
+    return a.concat(b).slice(0, 8);
+  }
+  function pkExact(q) {
+    if (!PK_COM) return null; var s = pkSplit(q);
+    for (var i = 0; i < PK_COM.length; i++) if ((PK_COM[i].k === s.k || PK_COM[i].k2 === s.k) && (!s.p || PK_COM[i].p === s.p)) return PK_COM[i];
+    return null;
+  }
+  function pkSugHtml() {
+    if (!pickSug.length) return '';
+    return pickSug.map(function (c, i) { return '<li><button type="button" class="pk-sug-b" data-pk="sug" data-i="' + i + '">' + esc(c.n) + ' <span>(' + esc(c.p) + ')</span></button></li>'; }).join('');
+  }
+  function pkShowSug() { var u = $('#pksug'); if (u) u.innerHTML = pkSugHtml(); }
+  function pkSearch(target) {
     var q = pickQ.replace(/\s+/g, ' ').trim();
-    if (!q) return;
-    var zip = /^\d{5}$/.test(q), id = ++pickReq;
-    var base = zip ? 'relative_post_code=' + q + '&max_distance=8000' : 'city=' + encodeURIComponent(pkCity(q));
+    if (!q && !target) return;
+    var zip = /^\d{5}$/.test(q), id = ++pickReq, c = target || (!zip ? (pkExact(q) || pickSug[0]) : null) || null, near = zip || !!c, base;
+    if (c && !target) pickQ = c.n + ' (' + c.p + ')';
+    pickSug = []; pkShowSug();
+    if (zip) base = 'relative_post_code=' + q + '&max_distance=8000';
+    else if (c) base = 'relative_point=' + c.lat + ',' + c.lon + '&max_distance=8000';
+    else base = 'city=' + encodeURIComponent(pkCity(q.replace(/\s*\([A-Za-z]{2}\)\s*$/, '')));
     pickState = 'busy'; pickRes = null; renderPick();
     Promise.all([pkFetch(base + '&type=parcel_locker'), pkFetch(base + '&type=pop')]).then(function (r) {
       if (id !== pickReq) return;
@@ -429,10 +467,10 @@
         if (x.status !== 'Operating' || !p.code || seen[p.code]) return;
         seen[p.code] = 1; list.push(p);
       });
-      if (zip) list.sort(function (a, b) { return a.dist - b.dist; });
+      if (near) list.sort(function (a, b) { return a.dist - b.dist; });
       else list.sort(function (a, b) { return a.zip < b.zip ? -1 : a.zip > b.zip ? 1 : a.street.localeCompare(b.street, 'it'); });
-      pickCut = !zip && (r[0].count > 100 || r[1].count > 100);
-      pickRes = zip ? list.slice(0, 20) : list; pickState = 'done'; renderPick();
+      pickCut = !near && (r[0].count > 100 || r[1].count > 100);
+      pickRes = near ? list.slice(0, 20) : list; pickState = 'done'; renderPick();
     }).catch(function () { if (id !== pickReq) return; pickState = 'error'; renderPick(); });
   }
   function pkZipCity(p) { return [p.zip, p.city].filter(Boolean).join(' ') + (p.prov ? ' (' + p.prov + ')' : ''); }
@@ -461,7 +499,8 @@
     }
     var h = head +
       '<div class="pk-form"><input id="pkq" class="pk-in" type="text" inputmode="search" autocomplete="postal-code" placeholder="' + esc(pk('ph')) + '" aria-label="' + esc(pk('ph')) + '" value="' + esc(pickQ) + '">' +
-      '<button type="button" class="pk-go" data-pk="go">' + esc(pk('go')) + '</button></div>';
+      '<button type="button" class="pk-go" data-pk="go">' + esc(pk('go')) + '</button></div>' +
+      '<ul class="pk-sug" id="pksug">' + pkSugHtml() + '</ul>';
     if (pickup) h += '<button type="button" class="rm" data-pk="keep">' + esc(pk('keep')) + '</button>';
     if (pickState === 'busy') h += '<div class="pk-msg" role="status">' + esc(pk('busy')) + '</div>';
     else if (pickState === 'error') h += '<div class="pk-msg bad" role="alert">' + esc(pk('err')) + '</div>';
@@ -496,10 +535,18 @@
     else if (a === 'change') { pickOpen = true; renderPick(); }
     else if (a === 'keep') { pickOpen = false; renderPick(); }
     else if (a === 'clear') { pickup = null; save(PICK_KEY, null); pickOpen = false; renderPick(); }
+    else if (a === 'sug') { var s = pickSug[+b.getAttribute('data-i')]; if (!s) return; pickQ = s.n + ' (' + s.p + ')'; pkSearch(s); }
     else if (a === 'i1') { pkI1 = !pkI1; renderPick(); }
     else if (a === 'i2') { pkI2 = !pkI2; renderPick(); }
   });
-  $('#cartFoot').addEventListener('input', function (e) { if (e.target.id === 'pkq') pickQ = e.target.value; });
+  $('#cartFoot').addEventListener('input', function (e) {
+    if (e.target.id !== 'pkq') return;
+    pickQ = e.target.value;
+    var v = pickQ.trim();
+    if (/^\d{5}$/.test(v)) { pkSearch(); return; }
+    pkLoadComuni(function () { pickSug = pkSuggest(pickQ); pkShowSug(); });
+  });
+  $('#cartFoot').addEventListener('focusin', function (e) { if (e.target.id === 'pkq') pkLoadComuni(); });
   $('#cartFoot').addEventListener('keydown', function (e) { if (e.target.id === 'pkq' && e.key === 'Enter') { e.preventDefault(); pickQ = e.target.value; pkSearch(); } });
 
   function renderCart() {

@@ -128,11 +128,11 @@
   var SHOPST_KEY = 'sss_shopst';
   var shopSt = load(SHOPST_KEY, null) || { closed: false, mode: 'closed', msg: '', back: '', off: [] };
   var TX = {
-    it: { soldout: 'Esaurito', soldout_s: 'esaurito', cart_off: 'Alcuni prodotti nel carrello sono esauriti: rimuovili per continuare.', closed_cart: 'Il negozio \u00e8 in vacanza: gli ordini sono chiusi.', vac_default: 'Siamo in vacanza! Torniamo presto.', vac_open: 'Siamo in vacanza: puoi ordinare, spediamo dal {x}.' },
-    en: { soldout: 'Sold out', soldout_s: 'sold out', cart_off: 'Some items in your cart are sold out: remove them to continue.', closed_cart: 'The shop is on holiday: orders are closed.', vac_default: 'We are on holiday! Back soon.', vac_open: 'We are on holiday: you can order, we ship from {x}.' }
+    it: { soldout: 'Terminato', soldout_s: 'terminato', cart_off: 'Alcuni prodotti nel carrello sono terminati: rimuovili per continuare.', closed_cart: 'Il negozio \u00e8 in vacanza: gli ordini sono chiusi.', vac_default: 'Siamo in vacanza! Torniamo presto.', vac_open: 'Siamo in vacanza: puoi ordinare, spediamo dal {x}.', only: 'Disponibili solo {n}' },
+    en: { soldout: 'Out of stock', soldout_s: 'out of stock', cart_off: 'Some items in your cart are out of stock: remove them to continue.', closed_cart: 'The shop is on holiday: orders are closed.', vac_default: 'We are on holiday! Back soon.', vac_open: 'We are on holiday: you can order, we ship from {x}.', only: 'Only {n} available' }
   };
   function tx(k, vars) { var s = (TX[lang === 'en' ? 'en' : 'it'] || TX.it)[k] || k; if (vars) for (var x in vars) s = s.replace('{' + x + '}', vars[x]); return s; }
-  function isOff(p, vi) { var o = shopSt.off || []; return o.indexOf(p.id) > -1 || (vi >= 0 && p.variants && p.variants[vi] && o.indexOf(p.id + '|' + p.variants[vi].it) > -1); }
+  function isOff(p, vi) { var o = shopSt.off || []; return o.indexOf('cat:' + p.cat) > -1 || o.indexOf(p.id) > -1 || (vi >= 0 && p.variants && p.variants[vi] && o.indexOf(p.id + '|' + p.variants[vi].it) > -1); }
   function shopClosed() { return shopSt.closed && shopSt.mode === 'closed'; }
   function banner() {
     var el = $('.announce'); if (!el) return;
@@ -325,12 +325,28 @@
 
   // ---------- carrello ----------
   function lineKey(l) { return l.id + '|' + l.v + '|' + l.o; }
+  // magazzino privato: prima di aggiungere chiede al Worker se i pezzi bastano (il sito non conosce i numeri).
+  // Se il Worker non risponde entro 2,5 secondi si aggiunge lo stesso: al pagamento il Worker ricontrolla.
+  function cartCopy() { return cart.map(function (l) { return { id: l.id, v: l.v, o: l.o, q: l.q }; }); }
+  function checkStock(next, ok) {
+    var ep = (CFG.checkoutEndpoint || '').replace(/\/+$/, ''); if (!ep) { ok(); return; }
+    var done = false, tm = setTimeout(function () { if (!done) { done = true; ok(); } }, 2500);
+    function end() { if (done) return false; done = true; clearTimeout(tm); return true; }
+    fetch(ep + '/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: next }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (!end()) return; if (j && j.ok === false) { toast(j.avail > 0 ? tx('only', { n: j.avail }) : tx('soldout')); if (!(j.avail > 0)) loadStatus(); } else ok(); })   // terminato: rilegge subito lo stato, cosi' la scheda diventa grigia e resta grigia
+      .catch(function () { if (end()) ok(); });
+  }
   function addToCart(id, v, o, q) {
     if (isOff(byId[id], v)) { toast(tx('soldout')); return; }
-    var found = cart.filter(function (l) { return l.id === id && l.v === v && l.o === o; })[0];
-    if (found) found.q = Math.min(99, found.q + q); else cart.push({ id: id, v: v, o: o, q: q });
-    save(CART_KEY, cart); renderCart(); toast(t('added'));
-    var tab = $('#cartTab'); tab.classList.remove('bump'); void tab.offsetWidth; tab.classList.add('bump');
+    var next = cartCopy(), f = next.filter(function (l) { return l.id === id && l.v === v && l.o === o; })[0];
+    if (f) f.q = Math.min(99, f.q + q); else next.push({ id: id, v: v, o: o, q: q });
+    checkStock(next, function () {
+      var found = cart.filter(function (l) { return l.id === id && l.v === v && l.o === o; })[0];
+      if (found) found.q = Math.min(99, found.q + q); else cart.push({ id: id, v: v, o: o, q: q });
+      save(CART_KEY, cart); renderCart(); toast(t('added'));
+      var tab = $('#cartTab'); tab.classList.remove('bump'); void tab.offsetWidth; tab.classList.add('bump');
+    });
   }
   function subtotal() { return cart.reduce(function (s, l) { return s + byId[l.id].options[l.o].price * l.q; }, 0); }
   function count() { return cart.reduce(function (s, l) { return s + l.q; }, 0); }
@@ -576,7 +592,11 @@
     $$('.line', lines).forEach(function (row) {
       var i = +row.getAttribute('data-i');
       setThumb($('.th img', row), sources(byId[cart[i].id], cart[i].v));
-      $$('[data-d]', row).forEach(function (b) { b.addEventListener('click', function () { cart[i].q += +b.getAttribute('data-d'); if (cart[i].q <= 0) cart.splice(i, 1); if (cart[i] && cart[i].q > 99) cart[i].q = 99; save(CART_KEY, cart); renderCart(); }); });
+      $$('[data-d]', row).forEach(function (b) { b.addEventListener('click', function () {
+        var d = +b.getAttribute('data-d'), line = cart[i];
+        function go() { var k = cart.indexOf(line); if (k < 0) return; cart[k].q += d; if (cart[k].q <= 0) cart.splice(k, 1); else if (cart[k].q > 99) cart[k].q = 99; save(CART_KEY, cart); renderCart(); }
+        if (d > 0) { var nx = cartCopy(); nx[i].q += d; checkStock(nx, go); } else go();   // il + chiede al magazzino, il - no
+      }); });
       $('[data-rm]', row).addEventListener('click', function () { cart.splice(i, 1); save(CART_KEY, cart); renderCart(); });
     });
     var S = C.config.shipping, lokIT = letterOk('letter'), lokW = letterOk('letterworld'), free = C.config.freeShippingFrom, min = C.config.minOrder;
@@ -620,7 +640,7 @@
       body: JSON.stringify({ items: cart.map(function (l) { return { id: l.id, v: l.v, o: l.o, q: l.q }; }), shipping: shipMethod, lang: lang, consent: { read: true, understood: true, v: TERMS_V }, pickup: pickPayload() })
     }).then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.url) throw new Error(j.error || 'err'); return j; }); })
       .then(function (j) { window.location.href = j.url; })
-      .catch(function (e) { err.textContent = t('e_fail') + (e && e.message && e.message !== 'err' ? ' (' + e.message + ')' : ''); btn.disabled = false; btn.textContent = t('pay'); });
+      .catch(function (e) { err.textContent = t('e_fail') + (e && e.message && e.message !== 'err' ? ' (' + e.message + ')' : ''); btn.disabled = false; btn.textContent = t('pay'); loadStatus(); });   // dopo un errore rilegge lo stato (terminati, vacanza)
   }
 
   // ---------- drawer / toast ----------

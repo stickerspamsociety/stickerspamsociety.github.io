@@ -90,6 +90,15 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
 .errbox{color:#ff7b7b;font-size:14px;margin:8px 0;min-height:20px}
 .lastx{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a2a;padding:10px 0}
 .lastx span{min-width:0;flex:1}
+.secs{border:2px solid #3a3a37;padding:12px 16px;margin-bottom:12px}
+.secs .row{justify-content:space-between;padding:6px 0;border-bottom:1px solid #2a2a2a}
+.secs .row:last-child{border-bottom:0}
+.secs .nm.offs{color:#ff7b7b}
+.vs{display:inline-flex;gap:4px;align-items:center}
+.stk{width:68px;min-height:44px;background:#141414;border:2px solid #3a3a37;padding:0 6px;text-align:center;font-size:14px}
+.stk.has{border-color:#b6ff00}
+.stk.zero{border-color:#ff7b7b;color:#ff7b7b}
+.vs .lbl{margin-right:2px}
 </style>
 </head>
 <body>
@@ -125,6 +134,7 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
 </section>
 <div id="prod" hidden>
 <div id="top"></div>
+<div id="secs"></div>
 <div id="vac"></div>
 <input id="q" class="fld" type="search" aria-label="Cerca un prodotto" placeholder="Cerca un prodotto…">
 <div class="chips" id="chips"></div>
@@ -150,6 +160,7 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
   function off(k) { return st.off.indexOf(k) > -1; }
   function anyOff(p) { return off(p.id) || (p.variants || []).some(function (v, i) { return off(key(p, i)); }); }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function catOff(c) { return off('cat:' + c); }   // sezione intera spenta
 
   // ---- comunicazione con il worker ----
   function api(method, body) {
@@ -197,13 +208,13 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
       p.variants.forEach(function (v, i) { if (!off(key(p, i))) n++; });
       vs = '<div class="vars">' + p.variants.map(function (v, i) {
         var on = !o && !off(key(p, i));
-        return '<button type="button" class="v' + (on ? ' on' : '') + '" data-k="' + esc(key(p, i)) + '" aria-pressed="' + on + '"' + (o ? ' disabled' : '') + '>' + esc(v.it) + '</button>';
+        return '<span class="vs"><button type="button" class="v' + (on ? ' on' : '') + '" data-k="' + esc(key(p, i)) + '" aria-pressed="' + on + '"' + (o ? ' disabled' : '') + '>' + esc(v.it) + '</button>' + stkInput(key(p, i)) + '</span>';
       }).join('') + '</div>';
     }
-    var sub = esc(cats[p.cat] || '') + ' · ' + (o ? 'ESAURITO' : (p.variants ? n + ' su ' + p.variants.length + ' disponibili' : 'disponibile'));
+    var sub = esc(cats[p.cat] || '') + ' · ' + (catOff(p.cat) ? 'SEZIONE SPENTA · ' : '') + (o ? 'ESAURITO' : (p.variants ? n + ' su ' + p.variants.length + ' disponibili' : 'disponibile'));
     return '<div class="item' + (o ? ' offp' : '') + '"><div class="row"><div class="th">' + esc(initials(p.name)) +
       '<img alt="" src="img/prodotti/' + p.id + '.jpg" onerror="if(this.dataset.t){this.style.display=\'none\'}else{this.dataset.t=1;this.src=this.src.replace(\'.jpg\',\'.png\')}"></div>' +
-      '<div class="nm">' + esc(p.name) + '<small>' + sub + '</small></div>' + sw(!o, p.id, p.name + (o ? ' esaurito' : ' disponibile')) + '</div>' + vs + '</div>';
+      '<div class="nm">' + esc(p.name) + '<small>' + sub + '</small></div>' + sw(!o, p.id, p.name + (o ? ' esaurito' : ' disponibile')) + '</div>' + (p.variants ? vs : '<div class="vars"><span class="vs"><label class="lbl">Pezzi</label>' + stkInput(p.id) + '</span></div>') + '</div>';
   }
   function render() {
     var nOff = C.products.filter(function (p) { return off(p.id); }).length, nAny = C.products.filter(anyOff).length;
@@ -211,6 +222,8 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
       '</div><div class="sub">' + (st.closed ? 'Spegni l’interruttore per riaprire' : (C.products.length - nOff) + ' disponibili · ' + nOff + ' esauriti') + '</div></div>' +
       '<button type="button" class="sw' + (st.closed ? '' : ' on') + '" data-act="closed" aria-pressed="' + !st.closed + '" aria-label="Negozio aperto"><i></i></button></section>' +
       (st.closed ? '' : '<button type="button" class="btn" data-act="closed">Vai in vacanza</button>');
+    $('#secs').innerHTML = '<section class="secs"><div class="lbl" style="margin-bottom:6px">Sezioni (spegne tutta la sezione in un colpo)</div>' +
+      C.categories.map(function (c) { var so = catOff(c.id); return '<div class="row"><div class="nm' + (so ? ' offs' : '') + '">' + esc(c.it[0]) + '<small>' + (so ? 'SPENTA: non si compra niente' : 'accesa') + '</small></div>' + sw(!so, 'cat:' + c.id, 'Sezione ' + c.it[0] + (so ? ' spenta' : ' accesa')) + '</div>'; }).join('') + '</section>';
     $('#vac').innerHTML = !st.closed ? '' :
       '<div class="lbl" style="margin-bottom:8px">Cosa succede agli ordini?</div>' +
       '<button type="button" class="opt' + (st.mode === 'closed' ? ' sel' : '') + '" data-mode="closed" aria-pressed="' + (st.mode === 'closed') + '"><b>Chiuso del tutto</b><span>Nessun ordine: il pagamento è bloccato</span></button>' +
@@ -224,8 +237,7 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
       '<button type="button" class="chip off' + (filter === 'off' ? ' sel' : '') + '" data-f="off">Esauriti · ' + nAny + '</button>';
     var l = visible();
     $('#list').innerHTML = l.length ? l.map(row).join('') : '<p class="sub" style="margin-top:14px">Nessun prodotto.</p>';
-    $('#bulk').innerHTML = (filter !== 'all' && filter !== 'off' ? '<button type="button" class="chip" data-bulk="off">Spegni la categoria</button><button type="button" class="chip" data-bulk="on">Riaccendi la categoria</button>' : '') +
-      '<button type="button" class="chip" data-bulk="all">Riaccendi tutto</button>';
+    $('#bulk').innerHTML = '<button type="button" class="chip" data-bulk="all">Riaccendi tutto (anche le sezioni)</button>';
   }
   function preview() { var e = $('#pvt'); if (e) e.textContent = st.msg || (st.mode === 'open' ? 'Siamo in vacanza: puoi ordinare, spediamo dal ' + (st.back || '…') + '.' : 'Siamo in vacanza! Torniamo presto.'); }
 
@@ -239,7 +251,7 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
     if (b.hasAttribute('data-f')) { filter = b.getAttribute('data-f'); return render(); }
     if (b.hasAttribute('data-bulk')) {
       var m = b.getAttribute('data-bulk');
-      if (m === 'all' && !confirm('Riaccendere tutti i prodotti?')) return;
+      if (m === 'all' && !confirm('Riaccendere tutti i prodotti e tutte le sezioni?')) return;
       prev = clone(st);
       if (m === 'all') st.off = [];
       else C.products.filter(function (p) { return p.cat === filter; }).forEach(function (p) {
@@ -273,7 +285,7 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
     tab = t; $('#orders').hidden = t !== 'orders'; $('#prod').hidden = t !== 'prod'; $('#newp').hidden = t !== 'new'; if (t === 'new') renderNew();
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.className = b.getAttribute('data-tab') === t ? 'sel' : ''; });
   }
-  function initOrders() { $('#tabs').hidden = false; setTab('orders'); loadInfo(); loadOrders(true); loadExtra(); }
+  function initOrders() { $('#tabs').hidden = false; setTab('orders'); loadInfo(); loadOrders(true); loadExtra(); loadStock(); }
   function loadInfo() {
     oapi('GET', '/admin/info').then(function (j) { info = j; renderInfo(); }).catch(function (e) { $('#info').innerHTML = '<span class="bad">Info non disponibili: ' + esc(e.message) + '</span>'; });
   }
@@ -508,6 +520,31 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
     });
   }
   function updPhoto() { var e = $('#nphoto'); if (e) e.textContent = photoHint(); }
+
+  // ================= MAGAZZINO (privato: lo vedi solo qui) =================
+  // Casella vuota = pezzi non contati (sempre in vendita). Numero = pezzi in magazzino:
+  // a ogni ordine pagato scala da solo; a 0 il prodotto si spegne ("Esaurito" sul sito); se lo ricarichi si riaccende.
+  var stockMap = {};
+  function stkInput(k) {
+    var has = Object.prototype.hasOwnProperty.call(stockMap, k), z = has && stockMap[k] <= 0;
+    return '<input class="stk' + (has ? ' has' : '') + (z ? ' zero' : '') + '" data-s="' + esc(k) + '" inputmode="numeric" placeholder="pz" aria-label="Pezzi in magazzino" value="' + (has ? stockMap[k] : '') + '">';
+  }
+  function loadStock() {
+    oapi('GET', '/admin/stock').then(function (j) { stockMap = j.stock || {}; render(); })
+      .catch(function (e) { setStat('Magazzino non letto: ' + e.message, true); });
+  }
+  function saveStock(k, raw) {
+    var v = String(raw).trim(), next = {}, x;
+    for (x in stockMap) next[x] = stockMap[x];
+    if (v === '') delete next[k];
+    else { var n = Math.floor(Number(v)); if (!(n >= 0 && n <= 99999)) { setStat('Numero non valido', true); setTimeout(render, 0); return; } next[k] = n; }
+    setStat('Salvataggio\u2026');
+    oapi('POST', '/admin/stock', { stock: next }).then(function (j) { stockMap = j.stock || {}; if (j.off) st.off = j.off; render(); setStat('Salvato \u00b7 ' + hhmm()); })
+      .catch(function (e) { setStat('NON salvato: ' + e.message, true); render(); });
+  }
+  document.addEventListener('change', function (e) {
+    var el = e.target; if (el.hasAttribute && el.hasAttribute('data-s')) saveStock(el.getAttribute('data-s'), el.value);
+  });
   document.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b || !nf && tab !== 'new') return;
     if (b.hasAttribute('data-ncopy')) { var p = C.products.filter(function (x) { return x.id === b.getAttribute('data-ncopy'); })[0]; if (p) { nf = fromProduct(p, false); nsrcq = ''; nlast = null; renderNew(); } return; }
@@ -538,4 +575,4 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
 })();
 </script>
 </body>
-</html>
+</html>

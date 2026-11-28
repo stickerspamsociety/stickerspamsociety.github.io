@@ -157,8 +157,6 @@ a.ig{color:#b6ff00}
 <div class="bulk" style="flex-wrap:wrap">
 <button type="button" class="chip" id="oref">Aggiorna</button>
 <button type="button" class="chip" id="oprep">Preparazione</button>
-<button type="button" class="chip" id="opack">CSV Packlink (BRT/SDA)</button>
-<a class="chip" id="opackgo" href="https://pro.packlink.it/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Apri Packlink ↗</a>
 <button type="button" class="chip" id="osender">Mittente Packlink</button>
 <button type="button" class="chip" id="ocsv">CSV della lista</button>
 <button type="button" class="chip" data-csvp="day">CSV oggi</button>
@@ -446,21 +444,23 @@ a.ig{color:#b6ff00}
       '<div class="shp">' + carSelect(o) + '<input class="fld" data-trk="' + o.id + '" maxlength="60" placeholder="Tracking: scrivilo e passa a Spediti" value="' + esc(o.trk) + '">' +
       '<button type="button" class="small" data-ship="' + o.id + '">Spedito</button></div>' +
       (o.method === 'brt' || o.method === 'inpost' ? '<div class="fmtr"><span class="lbl">Pacco</span>' + ['s', 'm', 'l'].map(function (f) { return '<button type="button" class="chip' + (o.fmt === f ? ' sel' : '') + '" data-fmt="' + f + '" data-oid="' + o.id + '">' + FMT[f].n + ' ' + FMT[f].kg + ' kg</button>'; }).join('') + '</div>' : '') +
+      (o.method === 'brt' ? '<button type="button" class="small" data-pkcsv="' + o.id + '" style="margin-top:8px">⬇ CSV Packlink di questo ordine</button>' : '') +
       '<div class="meta2"><input class="fld" data-note="' + o.id + '" maxlength="500" placeholder="Nota interna (solo tu)" value="' + esc(o.note) + '"><input class="fld" data-tag="' + o.id + '" maxlength="40" placeholder="Etichetta" value="' + esc(o.tag) + '"></div>' +
       '</div>';
   }
   // riquadro del problema: cosa e' successo e cosa puoi fare (email, gia' mandata, ha risposto, annulla)
   function probBox(o) {
     if (o.st !== 'problem') {
-      if (noCivico(o) && !o.rs && OPEN[o.st]) return '<div class="pbox amb"><b>⚠ Indirizzo senza numero civico.</b> <button type="button" class="small" data-civ="' + o.id + '">✉ Chiedi il civico</button></div>';
+      if (noCivico(o) && !o.rs && OPEN[o.st]) return '<div class="pbox amb"><b>⚠ Indirizzo senza numero civico.</b><div class="pacts"><button type="button" class="small" data-civ="' + o.id + '">✉ Chiedi il civico</button><button type="button" class="small" data-solve="' + o.id + '">✓ Risolto</button></div></div>';
       return '';
     }
     var h = hoursLeft(o);
     if (!o.ep) return '<div class="pbox"><b>Problema: l\'email al cliente non è ancora partita.</b><div class="pacts">' +
       '<button type="button" class="small" data-mail="prob" data-oid="' + o.id + '">✉ Manda email problema</button>' +
-      '<button type="button" class="small" data-done="prob" data-oid="' + o.id + '">✓ Già mandata</button></div></div>';
+      '<button type="button" class="small" data-done="prob" data-oid="' + o.id + '">✓ Già mandata</button>' +
+      '<button type="button" class="small" data-solve="' + o.id + '">✓ Risolto</button></div></div>';
     return '<div class="pbox"><b>' + (h > 0 ? 'Email mandata il ' + dmy(o.ep) + ': in attesa di risposta, restano ' + h + ' h.' : 'Email mandata il ' + dmy(o.ep) + ': 48 ore SCADUTE senza risposta.') + '</b><div class="pacts">' +
-      '<button type="button" class="small" data-resp="' + o.id + '">✓ Ha risposto</button>' +
+      '<button type="button" class="small" data-resp="' + o.id + '">✓ Ha risposto: risolto</button>' +
       '<button type="button" class="small" data-cancel="' + o.id + '">✗ Annulla ordine</button>' +
       '<button type="button" class="small" data-mail="prob" data-oid="' + o.id + '">✉ Rimanda email</button></div></div>';
   }
@@ -487,10 +487,10 @@ a.ig{color:#b6ff00}
     function who(o) { return '<b>#' + code(o) + '</b> ' + esc(o.name || '') + (o.addr.city ? ' — ' + esc(o.addr.city) : ''); }
     var noMail = [], wait = [], late = [], civ = [], ship = [];
     orders.forEach(function (o) {
-      if (o.st === 'problem' && !o.ep) noMail.push('<div class="ti"><span>' + who(o) + '<br><small>problema segnato, email non ancora mandata</small></span><span class="pacts"><button type="button" class="small" data-mail="prob" data-oid="' + o.id + '">✉ Manda</button><button type="button" class="small" data-done="prob" data-oid="' + o.id + '">✓ Già mandata</button></span></div>');
+      if (o.st === 'problem' && !o.ep) noMail.push('<div class="ti"><span>' + who(o) + '<br><small>problema segnato, email non ancora mandata</small></span><span class="pacts"><button type="button" class="small" data-mail="prob" data-oid="' + o.id + '">✉ Manda</button><button type="button" class="small" data-done="prob" data-oid="' + o.id + '">✓ Già mandata</button><button type="button" class="small" data-solve="' + o.id + '">✓ Risolto</button></span></div>');
       else if (o.st === 'problem' && hoursLeft(o) > 0) wait.push('<div class="ti"><span>' + who(o) + '<br><small>email mandata il ' + dmy(o.ep) + ' · restano ' + hoursLeft(o) + ' h</small></span><span class="pacts"><button type="button" class="small" data-resp="' + o.id + '">✓ Ha risposto</button><button type="button" class="small" data-cancel="' + o.id + '">✗ Annulla</button></span></div>');
       else if (o.st === 'problem') late.push('<div class="ti"><span>' + who(o) + '<br><small>email del ' + dmy(o.ep) + ' · 48 ore scadute senza risposta</small></span><span class="pacts"><button type="button" class="small" data-cancel="' + o.id + '">✗ Annulla ordine</button><button type="button" class="small" data-resp="' + o.id + '">✓ Ha risposto</button></span></div>');
-      else if (OPEN[o.st] && noCivico(o) && !o.rs) civ.push('<div class="ti"><span>' + who(o) + '<br><small>indirizzo senza numero civico: ' + esc(o.addr.l1) + '</small></span><span class="pacts"><button type="button" class="small" data-civ="' + o.id + '">✉ Chiedi il civico</button></span></div>');
+      else if (OPEN[o.st] && noCivico(o) && !o.rs) civ.push('<div class="ti"><span>' + who(o) + '<br><small>indirizzo senza numero civico: ' + esc(o.addr.l1) + '</small></span><span class="pacts"><button type="button" class="small" data-civ="' + o.id + '">✉ Chiedi il civico</button><button type="button" class="small" data-solve="' + o.id + '">✓ Risolto</button></span></div>');
       if (o.st === 'shipped' && !o.es) ship.push('<div class="ti"><span>' + who(o) + '<br><small>spedito il ' + dmy(o.sh) + ' · il cliente non è ancora stato avvisato</small></span><span class="pacts"><button type="button" class="small" data-mail="ship" data-oid="' + o.id + '">✉ Manda</button><button type="button" class="small" data-done="ship" data-oid="' + o.id + '">✓ Già mandata</button></span></div>');
     });
     group('⛔ 48 ore scadute: annulla e rimborsa da Stripe', late);
@@ -618,14 +618,12 @@ a.ig{color:#b6ff00}
     oapi('POST', '/admin/sender', { sender: x }).then(function (j) { sender = j.sender; showSender = false; renderSender(); setStat('Mittente salvato · ' + hhmm()); }).catch(function (e) { setStat('NON salvato: ' + e.message, true); });
   }
   // ---- CSV Packlink: ordini BRT/SDA ancora da spedire, stesse colonne dello script packlink-ordini.ps1 ----
-  function packlinkCsv() {
+  function packlinkCsv(only) {
     function go() {
       var S = sender || {};
       if (!S.via || !S.cap || !S.citta) { setStat('Prima compila il Mittente Packlink', true); showSender = true; return renderSender(); }
-      var l = orders.filter(function (o) { return o.method === 'brt' && OPEN[o.st] && o.paid; }).sort(function (a, b) { return a.t - b.t; });
-      if (!l.length) { setStat('Nessun pacco BRT/SDA da spedire'); return; }
-      var miss = l.filter(function (o) { return !o.fmt; });
-      if (miss.length && !confirm(miss.length + ' ordini senza formato del pacco: uso "Piccolo 1 kg". Continuo?')) return;
+      var l = [only];
+      if (!only.fmt && !confirm('Non hai scelto il formato del pacco: uso "Piccolo 1 kg". Continuo?')) return;
       var head = "Numero di ordine;nome mittente;Cognome mittente;Azienda mittente;Indirizzo Di Spedizione 1;Indirizzo Di Spedizione 2;CAP Spedizione;citta Spedizione;provincia di Spedizione;Paese di spedizione;Telefono spedizione;Email Spedizione;Nome destinatario;Cognome destinatario;Azienda destinatario;Indirizzo di consegna 1;Indirizzo di consegna 2;CAP di consegna;citta di consegna;provincia di consegna;Paese di consegna;Telefono di consegna;Email di consegna;assicurazione;Titolo dell'oggetto;Valore merce;Larghezza oggetto;Altezza oggetto;Lughezza oggetto;Peso dell'oggetto";
       function clean(t) { return String(t == null ? '' : t).replace(/[;\r\n]/g, ' ').trim(); }
       function phone(t) { var p = clean(t).replace(/[\s\-\.\(\)]/g, ''); if (p.indexOf('+39') === 0) p = p.slice(3); else if (p.indexOf('0039') === 0) p = p.slice(4); return p; }
@@ -637,8 +635,8 @@ a.ig{color:#b6ff00}
           first, last, '', a.l1, a.l2, a.zip, a.city, a.prov, a.cc, phone(o.phone), o.email, 'no',
           o.items.map(function (x) { return x.q + 'x ' + x.n; }).join(', '), val, f.w, f.h, f.l, f.kg].map(clean).join(';');
       });
-      saveCsv([head].concat(rows), 'ordini-packlink-' + ymd(new Date()) + '.csv');
-      setStat('CSV Packlink: ' + rows.length + ' pacchi · ora aprilo su Packlink');
+      saveCsv([head].concat(rows), 'packlink-' + code(only) + '.csv');
+      setStat('CSV Packlink scaricato: packlink-' + code(only) + '.csv');
     }
     if (sender) go(); else loadSender(go);
   }
@@ -734,7 +732,8 @@ a.ig{color:#b6ff00}
     if (b.id === 'oprep') { showPrep = !showPrep; return renderPrep(); }
     if (b.id === 'oprepcsv') return prepCsv();
     if (b.id === 'oprepprint') return printPrep();
-    if (b.id === 'opack') return packlinkCsv();
+    if (b.hasAttribute('data-pkcsv')) { var opc = find(b.getAttribute('data-pkcsv')); if (opc) packlinkCsv(opc); return; }
+    if (b.hasAttribute('data-solve')) { var osv = find(b.getAttribute('data-solve')); if (!osv) return; osv.rs = Date.now(); if (osv.st === 'problem') osv.st = 'new'; return saveOrder(osv); }
     if (b.id === 'osender') { showSender = !showSender; return renderSender(); }
     if (b.id === 'sndsave') return saveSender();
     if (b.hasAttribute('data-print')) { var opr = find(b.getAttribute('data-print')); if (opr) printOrder(opr); return; }

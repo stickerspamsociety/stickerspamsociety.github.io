@@ -117,6 +117,12 @@ pre.ph{background:#141414;border:1px solid #3a3a37;padding:10px;font-size:12px;c
 .prep{border:2px solid #7ab8ff;padding:12px;margin-bottom:12px;font-size:15px}
 .prep p{margin:3px 0}
 a.ig{color:#b6ff00}
+.pbox{border:2px solid #ff7b7b;padding:10px;margin:10px 0 0;font-size:14px}.pbox.amb{border-color:#ffb000}
+.pacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.pacts .small{margin:0;height:40px}
+.todo .tg{font-size:13px;font-weight:700;margin:12px 0 2px;color:#f4f4f0}
+.todo .ti small{color:#9a9a94;font-size:12px}.todo .ti .pacts{margin-top:0;flex:none}
+.okmail{color:#b6ff00;font-size:13px;align-self:center;margin-right:4px}
+.ord.cancelled{opacity:.6}
 </style>
 </head>
 <body>
@@ -340,7 +346,7 @@ a.ig{color:#b6ff00}
   function fixMeta(o) {                               // valori mancanti (ordini vecchi o Worker vecchio)
     o.st = o.st || 'new'; o.trk = o.trk || ''; o.note = o.note || ''; o.tag = o.tag || '';
     o.car = o.car || (o.method === 'inpost' ? 'inpost' : (o.method === 'letter' || o.method === 'letterworld') ? 'poste' : '');
-    o.pt = o.pt || 0; o.sh = o.sh || 0; o.dv = o.dv || 0; o.es = o.es || 0; o.ep = o.ep || 0;
+    o.pt = o.pt || 0; o.sh = o.sh || 0; o.dv = o.dv || 0; o.es = o.es || 0; o.ep = o.ep || 0; o.rs = o.rs || 0; o.cx = o.cx || 0;
     return o;
   }
   function loadOrders(reset) {
@@ -359,7 +365,7 @@ a.ig{color:#b6ff00}
   }
   function daysOld(o) { return Math.floor((Date.now() - o.t * 1000) / 86400000); }
   function isFermo(o) { return OPEN[o.st] && o.paid && daysOld(o) >= FERMO_GG; }
-  function hoursLeft(o) { return o.pt ? Math.ceil((o.pt + PROB_H * 3600000 - Date.now()) / 3600000) : PROB_H; }
+  function hoursLeft(o) { var t0 = o.ep || 0; return t0 ? Math.ceil((t0 + PROB_H * 3600000 - Date.now()) / 3600000) : PROB_H; }   // le 48 ore partono quando mandi l'email del problema
   function noCivico(o) { return o.addr.l1 && !/\d/.test(o.addr.l1); }
   // clienti abituali: quanti ordini con la stessa email (tra quelli caricati)
   function repeatCount(o) { var e = (o.email || '').toLowerCase(); if (!e) return 1; return orders.filter(function (x) { return (x.email || '').toLowerCase() === e; }).length; }
@@ -369,7 +375,8 @@ a.ig{color:#b6ff00}
     if (ofilter === 'todo') return !!OPEN[o.st];
     if (ofilter === 'fermi') return isFermo(o);
     if (ofilter === 'ship') return o.st === 'shipped';
-    if (ofilter === 'arch') return o.st === 'delivered';
+    if (ofilter === 'prob') return o.st === 'problem' || !!o.rs || o.st === 'cancelled';   // problemi aperti + storico (risposto / annullato)
+    if (ofilter === 'arch') return o.st === 'delivered' || o.st === 'cancelled';
     return true;
   }
   function oVisible() {
@@ -380,6 +387,7 @@ a.ig{color:#b6ff00}
     });
     if (ofilter === 'todo' || ofilter === 'fermi') l.sort(function (a, b) { return a.t - b.t; });       // il piu' vecchio in alto
     else if (ofilter === 'ship') l.sort(function (a, b) { return (b.sh || 0) - (a.sh || 0); });
+    else if (ofilter === 'prob') l.sort(function (a, b) { return (a.st === 'problem' ? 0 : 1) - (b.st === 'problem' ? 0 : 1) || b.t - a.t; });
     return l;
   }
   function badges(o) {
@@ -387,8 +395,10 @@ a.ig{color:#b6ff00}
     if (n > 1) b += '<span class="badge lime" title="Cliente abituale">★ ' + n + ' ordini</span>';
     if (o.tag) b += '<span class="badge">' + esc(o.tag) + '</span>';
     if (isFermo(o)) b += '<span class="badge red">FERMO ' + daysOld(o) + ' gg</span>';
-    if (o.st === 'problem') { var h = hoursLeft(o); b += '<span class="badge red">' + (h > 0 ? 'restano ' + h + ' h' : '48 h SCADUTE') + '</span>'; }
-    if (noCivico(o)) b += '<span class="badge amb">senza civico</span>';
+    if (o.st === 'problem') { var h = hoursLeft(o); b += '<span class="badge red">' + (!o.ep ? 'PROBLEMA: email da mandare' : h > 0 ? 'in attesa di risposta · restano ' + h + ' h' : '48 h SCADUTE') + '</span>'; }
+    if (o.rs) b += '<span class="badge lime">✓ ha risposto ' + dmy(o.rs) + '</span>';
+    if (o.st === 'cancelled') b += '<span class="badge red">ANNULLATO ' + dmy(o.cx) + '</span>';
+    if (noCivico(o) && !o.rs) b += '<span class="badge amb">senza civico</span>';
     return b;
   }
   function carSelect(o) {
@@ -409,34 +419,66 @@ a.ig{color:#b6ff00}
       (o.locker ? '<p>Locker: <b>' + esc(o.locker) + '</b></p>' : '') + (o.bell ? '<p>Campanello: ' + esc(o.bell) + '</p>' : '') +
       (o.ig ? '<p>Instagram: ' + (ig ? '<a class="ig" href="' + ig + '" target="_blank" rel="noopener">' + esc(o.ig) + ' ↗</a>' : esc(o.ig)) + '</p>' : '') +
       '<button type="button" class="small" data-copy="' + o.id + '">Copia indirizzo</button></details>' +
+      probBox(o) +
       '<div class="sts">' + STS.map(function (s) { return '<button type="button" class="chip' + (o.st === s[0] ? ' sel' : '') + '" data-st="' + s[0] + '" data-oid="' + o.id + '">' + s[1] + '</button>'; }).join('') + '</div>' +
       '<div class="shp">' + carSelect(o) + '<input class="fld" data-trk="' + o.id + '" maxlength="60" placeholder="Tracking: scrivilo e passa a Spediti" value="' + esc(o.trk) + '">' +
       '<button type="button" class="small" data-ship="' + o.id + '">Spedito</button></div>' +
       '<div class="meta2"><input class="fld" data-note="' + o.id + '" maxlength="500" placeholder="Nota interna (solo tu)" value="' + esc(o.note) + '"><input class="fld" data-tag="' + o.id + '" maxlength="40" placeholder="Etichetta" value="' + esc(o.tag) + '"></div>' +
       '</div>';
   }
-  function oRow(o) {                                   // riga compatta: spediti e archivio
+  // riquadro del problema: cosa e' successo e cosa puoi fare (email, gia' mandata, ha risposto, annulla)
+  function probBox(o) {
+    if (o.st !== 'problem') {
+      if (noCivico(o) && !o.rs && OPEN[o.st]) return '<div class="pbox amb"><b>⚠ Indirizzo senza numero civico.</b> <button type="button" class="small" data-civ="' + o.id + '">✉ Chiedi il civico</button></div>';
+      return '';
+    }
+    var h = hoursLeft(o);
+    if (!o.ep) return '<div class="pbox"><b>Problema: l\'email al cliente non è ancora partita.</b><div class="pacts">' +
+      '<button type="button" class="small" data-mail="prob" data-oid="' + o.id + '">✉ Manda email problema</button>' +
+      '<button type="button" class="small" data-done="prob" data-oid="' + o.id + '">✓ Già mandata</button></div></div>';
+    return '<div class="pbox"><b>' + (h > 0 ? 'Email mandata il ' + dmy(o.ep) + ': in attesa di risposta, restano ' + h + ' h.' : 'Email mandata il ' + dmy(o.ep) + ': 48 ore SCADUTE senza risposta.') + '</b><div class="pacts">' +
+      '<button type="button" class="small" data-resp="' + o.id + '">✓ Ha risposto</button>' +
+      '<button type="button" class="small" data-cancel="' + o.id + '">✗ Annulla ordine</button>' +
+      '<button type="button" class="small" data-mail="prob" data-oid="' + o.id + '">✉ Rimanda email</button></div></div>';
+  }
+  function oRow(o) {                                   // riga compatta: spediti, problemi risolti, archivio
     var tu = trackUrl(o);
     var trk = o.trk ? (tu && TRACK[o.car] && TRACK[o.car].url.indexOf('{n}') > -1 ? '<a class="ig" href="' + tu + '" target="_blank" rel="noopener">' + esc(o.trk) + ' ↗</a>' : esc(o.trk)) : 'senza tracking';
     var acts = '<button type="button" class="small" data-copy="' + o.id + '">Copia</button>';
-    if (o.st === 'shipped') acts += '<button type="button" class="small" data-mail="ship" data-oid="' + o.id + '">' + (o.es ? '✉ di nuovo' : '✉ Email') + '</button><button type="button" class="small" data-st="delivered" data-oid="' + o.id + '">Consegnato</button>';
-    acts += '<button type="button" class="small" data-st="packed" data-oid="' + o.id + '" title="Rimetti tra gli ordini da fare">↩</button>';
+    if (o.st === 'shipped') acts += (o.es ? '<span class="okmail">✓ email mandata ' + dmy(o.es) + '</span><button type="button" class="small" data-mail="ship" data-oid="' + o.id + '">✉ Rimanda</button>'
+                                          : '<button type="button" class="small" data-mail="ship" data-oid="' + o.id + '">✉ Manda email spedizione</button><button type="button" class="small" data-done="ship" data-oid="' + o.id + '">✓ Già mandata</button>') +
+      '<button type="button" class="small" data-st="delivered" data-oid="' + o.id + '">Consegnato</button>';
+    if (o.st === 'shipped' || o.st === 'delivered') acts += '<button type="button" class="small" data-st="packed" data-oid="' + o.id + '" title="Rimetti tra gli ordini da fare">↩</button>';
+    if (o.st === 'cancelled') acts += '<a class="small ig" style="display:inline-flex;align-items:center;padding:0 10px;border:2px solid #3a3a37" href="https://dashboard.stripe.com/payments" target="_blank" rel="noopener">Stripe ↗</a>';
+    var needCar = o.method === 'brt' && !o.car;          // BRT/SDA senza corriere scelto: menu per sceglierlo
     return '<div class="orow" data-id="' + o.id + '"><div><b>#' + code(o) + '</b> ' + esc(o.name || '') + (o.addr.city ? ' — ' + esc(o.addr.city) : '') + badges(o) +
-      '<div class="om">' + esc((TRACK[o.car] || {}).n || METHODS[o.method] || '') + ' · ' + trk + ' · spedito ' + dmy(o.sh) + (o.dv ? ' · consegnato ' + dmy(o.dv) : '') + ' · ' + eur(o.total) + '</div>' +
+      (needCar ? '<div style="max-width:160px;margin-top:6px">' + carSelect(o) + '</div>' : '') +
+      '<div class="om">' + (o.sh ? esc((TRACK[o.car] || {}).n || METHODS[o.method] || '') + ' · ' + trk + ' · spedito ' + dmy(o.sh) + (o.dv ? ' · consegnato ' + dmy(o.dv) : '') + ' · ' : esc(METHODS[o.method] || '') + ' · ' + (STNAME[o.st] || '') + ' · ') + eur(o.total) + '</div>' +
       (o.note ? '<div class="om">Nota: ' + esc(o.note) + '</div>' : '') + '</div><div class="acts">' + acts + '</div></div>';
   }
   // ---- attivita' da fare: email da mandare, problemi con il conto alla rovescia, ordini fermi ----
   function tone() { try { return localStorage.getItem('rb_tone') === 'nob' ? 'nob' : 'std'; } catch (e) { return 'std'; } }
   function renderTodo() {
-    var it = [];
+    var sec = [];
+    function group(title, rows) { if (rows.length) sec.push('<div class="tg">' + title + ' · ' + rows.length + '</div>' + rows.join('')); }
+    function who(o) { return '<b>#' + code(o) + '</b> ' + esc(o.name || '') + (o.addr.city ? ' — ' + esc(o.addr.city) : ''); }
+    var noMail = [], wait = [], late = [], civ = [], ship = [];
     orders.forEach(function (o) {
-      if (o.st === 'problem') { var h = hoursLeft(o); it.push('<div class="ti"><span>⏰ <b>#' + code(o) + '</b> ' + esc(o.name) + ' · ' + (h > 0 ? 'restano ' + h + ' h' : '<b style="color:#ff7b7b">48 h scadute: annulla e rimborsa da Stripe</b>') + '</span>' + (o.ep ? '<span class="om">email mandata</span>' : '<button type="button" class="small" data-mail="prob" data-oid="' + o.id + '">✉ Email problema</button>') + '</div>'); }
-      if (o.st === 'shipped' && !o.es) it.push('<div class="ti"><span>📦 <b>#' + code(o) + '</b> ' + esc(o.name) + ' · spedito, email da mandare</span><button type="button" class="small" data-mail="ship" data-oid="' + o.id + '">✉ Email spedito</button></div>');
+      if (o.st === 'problem' && !o.ep) noMail.push('<div class="ti"><span>' + who(o) + '<br><small>problema segnato, email non ancora mandata</small></span><span class="pacts"><button type="button" class="small" data-mail="prob" data-oid="' + o.id + '">✉ Manda</button><button type="button" class="small" data-done="prob" data-oid="' + o.id + '">✓ Già mandata</button></span></div>');
+      else if (o.st === 'problem' && hoursLeft(o) > 0) wait.push('<div class="ti"><span>' + who(o) + '<br><small>email mandata il ' + dmy(o.ep) + ' · restano ' + hoursLeft(o) + ' h</small></span><span class="pacts"><button type="button" class="small" data-resp="' + o.id + '">✓ Ha risposto</button><button type="button" class="small" data-cancel="' + o.id + '">✗ Annulla</button></span></div>');
+      else if (o.st === 'problem') late.push('<div class="ti"><span>' + who(o) + '<br><small>email del ' + dmy(o.ep) + ' · 48 ore scadute senza risposta</small></span><span class="pacts"><button type="button" class="small" data-cancel="' + o.id + '">✗ Annulla ordine</button><button type="button" class="small" data-resp="' + o.id + '">✓ Ha risposto</button></span></div>');
+      else if (OPEN[o.st] && noCivico(o) && !o.rs) civ.push('<div class="ti"><span>' + who(o) + '<br><small>indirizzo senza numero civico: ' + esc(o.addr.l1) + '</small></span><span class="pacts"><button type="button" class="small" data-civ="' + o.id + '">✉ Chiedi il civico</button></span></div>');
+      if (o.st === 'shipped' && !o.es) ship.push('<div class="ti"><span>' + who(o) + '<br><small>spedito il ' + dmy(o.sh) + ' · il cliente non è ancora stato avvisato</small></span><span class="pacts"><button type="button" class="small" data-mail="ship" data-oid="' + o.id + '">✉ Manda</button><button type="button" class="small" data-done="ship" data-oid="' + o.id + '">✓ Già mandata</button></span></div>');
     });
+    group('⛔ 48 ore scadute: annulla e rimborsa da Stripe', late);
+    group('❗ Problemi: email da mandare', noMail);
+    group('⚠ Senza numero civico', civ);
+    group('⏰ In attesa di risposta del cliente', wait);
+    group('📦 Spediti: avvisa il cliente', ship);
     var nf = orders.filter(isFermo).length;
-    if (nf) it.push('<div class="ti"><span>🐌 ' + nf + (nf === 1 ? ' ordine fermo' : ' ordini fermi') + ' da ' + FERMO_GG + ' giorni o più</span><button type="button" class="small" data-of="fermi">Vedi</button></div>');
+    if (nf) sec.push('<div class="ti"><span>🐌 ' + nf + (nf === 1 ? ' ordine fermo' : ' ordini fermi') + ' da ' + FERMO_GG + ' giorni o più</span><button type="button" class="small" data-of="fermi">Vedi</button></div>');
     var t = tone();
-    $('#todo').innerHTML = '<div class="todo"><div class="lbl">Attività da fare</div>' + (it.length ? it.join('') : '<p class="sub">Niente da fare. 🎉</p>') +
+    $('#todo').innerHTML = '<div class="todo"><div class="lbl">Attività da fare</div>' + (sec.length ? sec.join('') : '<p class="sub">Tutto fatto. ✓</p>') +
       '<div class="lbl" style="margin-top:10px">Tono delle email</div><div class="tone"><button type="button" class="chip' + (t === 'std' ? ' sel' : '') + '" data-tone="std">Classico</button><button type="button" class="chip' + (t === 'nob' ? ' sel' : '') + '" data-tone="nob">Nobiliare</button></div></div>';
   }
   // ---- preparazione delle 20: ordini "vergini" (Nuovo, senza etichetta) con gli articoli sommati ----
@@ -456,23 +498,25 @@ a.ig{color:#b6ff00}
   }
   function renderOrders() {
     var nTodo = orders.filter(function (o) { return OPEN[o.st]; }).length, nShip = orders.filter(function (o) { return o.st === 'shipped'; }).length, nF = orders.filter(isFermo).length;
-    $('#ochips').innerHTML = [['todo', 'Da fare · ' + nTodo], ['fermi', 'Fermi · ' + nF], ['ship', 'Spediti · ' + nShip], ['arch', 'Archivio'], ['all', 'Tutti']].map(function (c) {
-      return '<button type="button" class="chip' + (ofilter === c[0] ? ' sel' : '') + (c[0] === 'fermi' && nF ? ' off' : '') + '" data-of="' + c[0] + '">' + c[1] + '</button>';
+    var nP = orders.filter(function (o) { return o.st === 'problem'; }).length;
+    $('#ochips').innerHTML = [['todo', 'Da fare · ' + nTodo], ['prob', 'Problemi · ' + nP], ['fermi', 'Fermi · ' + nF], ['ship', 'Spediti · ' + nShip], ['arch', 'Archivio'], ['all', 'Tutti']].map(function (c) {
+      return '<button type="button" class="chip' + (ofilter === c[0] ? ' sel' : '') + ((c[0] === 'fermi' && nF) || (c[0] === 'prob' && nP) ? ' off' : '') + '" data-of="' + c[0] + '">' + c[1] + '</button>';
     }).join('');
-    var l = oVisible(), big = ofilter === 'todo' || ofilter === 'fermi' || ofilter === 'all';
+    var l = oVisible(), big = ofilter === 'todo' || ofilter === 'fermi' || ofilter === 'prob' || ofilter === 'all';
     $('#olist').innerHTML = l.length ? l.map(function (o) { return big && OPEN[o.st] ? oCard(o) : oRow(o); }).join('') :
-      '<p class="sub" style="margin-top:14px">' + ({ todo: 'Nessun ordine da fare.', fermi: 'Nessun ordine fermo.', ship: 'Nessun ordine spedito in attesa di consegna.', arch: 'Archivio vuoto.' }[ofilter] || 'Nessun ordine.') + '</p>';
+      '<p class="sub" style="margin-top:14px">' + ({ prob: 'Nessun problema, né aperto né risolto.', todo: 'Nessun ordine da fare.', fermi: 'Nessun ordine fermo.', ship: 'Nessun ordine spedito in attesa di consegna.', arch: 'Archivio vuoto.' }[ofilter] || 'Nessun ordine.') + '</p>';
     $('#omore').innerHTML = hasMore ? '<button type="button" class="btn" id="omorebtn">Carica altri ordini</button>' : '';
     renderTodo(); renderPrep();
   }
   function find(id) { return orders.filter(function (o) { return o.id === id; })[0]; }
   function saveOrder(o) {
     setStat('Salvataggio…');
-    oapi('POST', '/admin/order', { id: o.id, st: o.st, trk: o.trk || '', car: o.car || '', note: o.note || '', tag: o.tag || '', es: o.es || 0, ep: o.ep || 0 })
-      .then(function (v) { o.pt = v.pt || 0; o.sh = v.sh || 0; o.dv = v.dv || 0; setStat('Salvato · ' + hhmm()); renderOrders(); })
-      .catch(function (e) { setStat('NON salvato: ' + e.message, true); });
+    oapi('POST', '/admin/order', { id: o.id, st: o.st, trk: o.trk || '', car: o.car || '', note: o.note || '', tag: o.tag || '', es: o.es || 0, ep: o.ep || 0, rs: o.rs || 0 })
+      .then(function (v) { o.pt = v.pt || 0; o.sh = v.sh || 0; o.dv = v.dv || 0; o.cx = v.cx || 0;
+        if (o.es && !v.es) setStat('ATTENZIONE: il Worker non salva le email mandate. Controlla che su Cloudflare ci sia il Worker v5.5.', true); else setStat('Salvato · ' + hhmm()); renderOrders(); })
+      .catch(function (e) { setStat('NON salvato: ' + e.message + (/dati non validi/.test(e.message) ? ' (su Cloudflare c\'è un Worker vecchio: serve il v5.5)' : ''), true); });
   }
-  function setState(o, st) { if (st === 'problem' && o.st !== 'problem') o.ep = 0; o.st = st; saveOrder(o); renderOrders(); }   // nuovo problema: l'email va rimandata
+  function setState(o, st) { if (st === 'problem' && o.st !== 'problem') { o.ep = 0; o.rs = 0; } o.st = st; saveOrder(o); renderOrders(); }   // nuovo problema: l'email va rimandata
   function copyText(t) {
     function ok() { setStat('Copiato · ' + hhmm()); }
     if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(ok).catch(function () { prompt('Copia da qui:', t); }); }
@@ -503,9 +547,11 @@ a.ig{color:#b6ff00}
   }
   function openMail(kind, o) {
     if (!o.email) { setStat('Questo ordine non ha email', true); return; }
+    if (kind === 'ship' && o.method === 'brt' && !o.car) { setStat('Scegli prima il corriere (BRT o SDA) sulla riga dell\'ordine', true); return; }
     var m = mailText(kind, o);
     var u = 'https://mail.google.com/mail/?view=cm&fs=1&authuser=' + encodeURIComponent(GMAIL) + '&to=' + encodeURIComponent(o.email) + '&su=' + encodeURIComponent(m.s) + '&body=' + encodeURIComponent(m.b);
     window.open(u, '_blank', 'noopener');
+    if (kind === 'prob' && o.st !== 'problem') { o.st = 'problem'; o.rs = 0; }
     if (kind === 'ship') o.es = Date.now(); else o.ep = Date.now();
     saveOrder(o);
   }
@@ -517,7 +563,7 @@ a.ig{color:#b6ff00}
     a.href = u; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(u); }, 1000);
   }
-  var STNAME = { new: 'Nuovo', todo: 'Da produrre', problem: 'Problema', packed: 'Imballato', shipped: 'Spedito', delivered: 'Consegnato' };
+  var STNAME = { new: 'Nuovo', todo: 'Da produrre', problem: 'Problema', packed: 'Imballato', shipped: 'Spedito', delivered: 'Consegnato', cancelled: 'Annullato' };
   function downloadCsv(list, fname) {
     fname = fname || 'ordini-' + new Date().toISOString().slice(0, 10) + '.csv';
     var head = ['ordine', 'data', 'nome', 'indirizzo', 'indirizzo2', 'cap', 'citta', 'provincia', 'paese', 'telefono', 'email', 'metodo', 'corriere', 'locker', 'campanello', 'instagram', 'totale_eur', 'stato', 'tracking', 'etichetta', 'nota', 'prodotti'];
@@ -579,6 +625,21 @@ a.ig{color:#b6ff00}
       if (os.method === 'brt' && !os.car) { setStat('Scegli prima BRT o SDA', true); return; }
       return setState(os, 'shipped');
     }
+    if (b.hasAttribute('data-done')) {                 // email gia' mandata a mano: metto la spunta senza aprire Gmail
+      var od = find(b.getAttribute('data-oid')); if (!od) return;
+      if (b.getAttribute('data-done') === 'ship') od.es = Date.now(); else od.ep = Date.now();
+      return saveOrder(od);
+    }
+    if (b.hasAttribute('data-civ')) { var ov = find(b.getAttribute('data-civ')); if (ov) openMail('prob', ov); return; }
+    if (b.hasAttribute('data-resp')) {                 // il cliente ha risposto: torna tra gli ordini da fare, resta la spunta
+      var or2 = find(b.getAttribute('data-resp')); if (!or2) return;
+      or2.rs = Date.now(); or2.st = 'new'; return saveOrder(or2);
+    }
+    if (b.hasAttribute('data-cancel')) {
+      var oc2 = find(b.getAttribute('data-cancel')); if (!oc2) return;
+      if (!confirm('Annullare #' + code(oc2) + ' di ' + (oc2.name || '') + '?\n\nIl rimborso NON parte da qui: dopo si apre Stripe, apri il pagamento da ' + eur(oc2.total) + ' e premi Refund.')) return;
+      oc2.st = 'cancelled'; saveOrder(oc2); window.open('https://dashboard.stripe.com/payments', '_blank', 'noopener'); return;
+    }
     if (b.hasAttribute('data-mail')) { var om = find(b.getAttribute('data-oid')); if (om) openMail(b.getAttribute('data-mail') === 'ship' ? 'ship' : 'prob', om); return; }
     if (b.hasAttribute('data-copy')) { var oo = find(b.getAttribute('data-copy')); if (oo) copyText(addrText(oo)); return; }
     if (b.id === 'omorebtn') return loadOrders(false);
@@ -592,7 +653,7 @@ a.ig{color:#b6ff00}
     }
   });
   document.addEventListener('input', function (e) {
-    if (e.target.id === 'oq') { oq = e.target.value; var l = oVisible(), big = ofilter === 'todo' || ofilter === 'fermi' || ofilter === 'all'; $('#olist').innerHTML = l.length ? l.map(function (o) { return big && OPEN[o.st] ? oCard(o) : oRow(o); }).join('') : '<p class="sub" style="margin-top:14px">Nessun ordine.</p>'; }
+    if (e.target.id === 'oq') { oq = e.target.value; var l = oVisible(), big = ofilter === 'todo' || ofilter === 'fermi' || ofilter === 'prob' || ofilter === 'all'; $('#olist').innerHTML = l.length ? l.map(function (o) { return big && OPEN[o.st] ? oCard(o) : oRow(o); }).join('') : '<p class="sub" style="margin-top:14px">Nessun ordine.</p>'; }
   });
   document.addEventListener('change', function (e) {
     var el = e.target; if (!el.hasAttribute) return;
@@ -786,4 +847,4 @@ a.ig{color:#b6ff00}
 })();
 </script>
 </body>
-</html>
+</html>

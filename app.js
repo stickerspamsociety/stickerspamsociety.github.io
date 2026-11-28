@@ -17,7 +17,7 @@
       ship_2: 'Lettera: 3€ in Italia, 7€ all’estero (Europa compresa, fino a 100 stickers). Senza tracking, senza rispedizione e senza rimborso. All’estero ti mandiamo il video di quando la imbuchiamo alle poste.',
       ship_3: 'Spedizione gratis sui pacchi da 50€.', ship_4: 'Ordine minimo 5€.',
       ship_5: 'Prepariamo l’ordine in 1-2 giorni e lo consegniamo al corriere entro 1 giorno.',
-      ship_6: 'Corrieri: Poste per le lettere, InPost, BRT e SDA per i pacchi.',
+      ship_6: 'Corrieri: Poste per le lettere, InPost, BRT e SDA per i pacchi. Con BRT, se la consegna a domicilio non va a buon fine, facciamo arrivare il pacco al punto di ritiro BRT pi\u00f9 vicino.',
       ship_7: 'La lettera va bene solo per stickers, tubini, schede, santini e portaclipper: massimo 2 oggetti (devono stare in una busta a bolle 20x13) e 50 stickers in Italia, 100 all’estero.',
       ship_8: 'Ritiro a mano: alle feste tekno.',
       custom_title: 'Ordini personalizzati', custom_h: 'Hai un logo?',
@@ -52,7 +52,7 @@
       ship_2: 'Letter: €3 in Italy, €7 abroad (Europe included, up to 100 stickers). No tracking, no reship and no refund. Abroad, we send you a video of us dropping the letter in the mailbox.',
       ship_3: 'Free shipping on parcels from €50.', ship_4: 'Minimum order €5.',
       ship_5: 'We prepare your order in 1-2 days and hand it to the courier within 1 day.',
-      ship_6: 'Couriers: Poste for letters, InPost, BRT and SDA for parcels.',
+      ship_6: 'Couriers: Poste for letters, InPost, BRT and SDA for parcels. With BRT, if home delivery fails, we have the parcel sent to the nearest BRT pickup point.',
       ship_7: 'Letters are only for stickers, tubes, cards, holy cards and lighter holders: max 2 items (they must fit in a 20x13 bubble mailer) and 50 stickers in Italy, 100 abroad.',
       ship_8: 'Hand pickup: at tekno parties.',
       custom_title: 'Custom orders', custom_h: 'Got a logo?',
@@ -128,11 +128,17 @@
   var SHOPST_KEY = 'sss_shopst';
   var shopSt = load(SHOPST_KEY, null) || { closed: false, mode: 'closed', msg: '', back: '', off: [] };
   var TX = {
-    it: { soldout: 'Terminato', soldout_s: 'terminato', cart_off: 'Alcuni prodotti nel carrello sono terminati: rimuovili per continuare.', closed_cart: 'Il negozio \u00e8 in vacanza: gli ordini sono chiusi.', vac_default: 'Siamo in vacanza! Torniamo presto.', vac_open: 'Siamo in vacanza: puoi ordinare, spediamo dal {x}.', only: 'Disponibili solo {n}' },
-    en: { soldout: 'Out of stock', soldout_s: 'out of stock', cart_off: 'Some items in your cart are out of stock: remove them to continue.', closed_cart: 'The shop is on holiday: orders are closed.', vac_default: 'We are on holiday! Back soon.', vac_open: 'We are on holiday: you can order, we ship from {x}.', only: 'Only {n} available' }
+    it: { soldout: 'Terminato', soldout_s: 'terminato', cart_off: 'Alcuni prodotti nel carrello sono terminati: rimuovili per continuare.', closed_cart: 'Il negozio \u00e8 in vacanza: gli ordini sono chiusi.', vac_default: 'Siamo in vacanza! Torniamo presto.', vac_open: 'Siamo in vacanza: puoi ordinare, spediamo dal {x}.', only: 'Disponibili solo {n}', pre: 'Preordine', pre_s: 'Spedizione dal {x}' },
+    en: { soldout: 'Out of stock', soldout_s: 'out of stock', cart_off: 'Some items in your cart are out of stock: remove them to continue.', closed_cart: 'The shop is on holiday: orders are closed.', vac_default: 'We are on holiday! Back soon.', vac_open: 'We are on holiday: you can order, we ship from {x}.', only: 'Only {n} available', pre: 'Pre-order', pre_s: 'Ships from {x}' }
   };
   function tx(k, vars) { var s = (TX[lang === 'en' ? 'en' : 'it'] || TX.it)[k] || k; if (vars) for (var x in vars) s = s.replace('{' + x + '}', vars[x]); return s; }
-  function isOff(p, vi) { var o = shopSt.off || []; return o.indexOf('cat:' + p.cat) > -1 || o.indexOf(p.id) > -1 || (vi >= 0 && p.variants && p.variants[vi] && o.indexOf(p.id + '|' + p.variants[vi].it) > -1); }
+  function vkey(p, vi) { return vi >= 0 && p.variants && p.variants[vi] ? p.id + '|' + p.variants[vi].it : p.id; }
+  // nascosto dal retrobottega: il prodotto (o la variante) non si vede e non si compra
+  function isHidden(p, vi) { var h = shopSt.hide || []; return h.indexOf(p.id) > -1 || (vi >= 0 && h.indexOf(vkey(p, vi)) > -1); }
+  // preordine dal retrobottega: testo della data ("15 dicembre"), si puo' ordinare anche se terminato
+  function preOf(p, vi) { var pr = shopSt.pre || {}; return pr[vkey(p, vi)] || pr[p.id] || ''; }
+  function isOff(p, vi) { if (isHidden(p, vi)) return true; if (preOf(p, vi)) return false; return isOffRaw(p, vi); }
+  function isOffRaw(p, vi) { var o = shopSt.off || []; return o.indexOf('cat:' + p.cat) > -1 || o.indexOf(p.id) > -1 || (vi >= 0 && p.variants && p.variants[vi] && o.indexOf(p.id + '|' + p.variants[vi].it) > -1); }
   function shopClosed() { return shopSt.closed && shopSt.mode === 'closed'; }
   function banner() {
     var el = $('.announce'); if (!el) return;
@@ -142,7 +148,7 @@
   function loadStatus() {
     var ep = ((window.SITE_CONFIG || {}).checkoutEndpoint || '').replace(/\/+$/, ''); if (!ep) return;
     fetch(ep + '/status').then(function (r) { return r.json(); }).then(function (j) {
-      var n = { closed: !!j.closed, mode: j.mode === 'open' ? 'open' : 'closed', msg: j.msg || '', back: j.back || '', off: Array.isArray(j.off) ? j.off : [] };
+      var n = { closed: !!j.closed, mode: j.mode === 'open' ? 'open' : 'closed', msg: j.msg || '', back: j.back || '', off: Array.isArray(j.off) ? j.off : [], hide: Array.isArray(j.hide) ? j.hide : [], pre: (j.pre && typeof j.pre === 'object') ? j.pre : {} };
       var ex = Array.isArray(j.extra) ? j.extra : [];
       var exChanged = JSON.stringify(ex) !== JSON.stringify(load(EXTRA_KEY, []));
       if (exChanged) { save(EXTRA_KEY, ex); applyExtra(ex); reindex(); cart = cart.filter(function (l) { var p = byId[l.id]; return p && p.options[l.o] && (l.v < 0 || (p.variants && p.variants[l.v])); }); save(CART_KEY, cart); }
@@ -199,16 +205,17 @@
   function makeCard(p) {
     var card = document.createElement('article');
     card.className = 'card rv'; card.setAttribute('data-id', p.id);
-    var vi = p.variants ? 0 : -1, oi = 0;
+    var vi = -1, oi = 0;
+    if (p.variants) { vi = 0; for (var vv = 0; vv < p.variants.length; vv++) if (!isHidden(p, vv)) { vi = vv; break; } }   // prima variante non nascosta
     var opts = '';
     if (p.options.length > 1) {
       opts = '<select class="sel-o" aria-label="Opzione">' + p.options.map(function (o, i) { return '<option value="' + i + '">' + esc(olabel(p, i)) + ' – ' + money(o.price) + '</option>'; }).join('') + '</select>';
     }
     var vars = '';
-    if (p.variants) vars = '<select class="sel-v" aria-label="Variante">' + p.variants.map(function (v, i) { return '<option value="' + i + '">' + esc(v[lang] || v.it) + (isOff(p, i) ? ' - ' + esc(tx('soldout_s')) : '') + '</option>'; }).join('') + '</select>';
+    if (p.variants) vars = '<select class="sel-v" aria-label="Variante">' + p.variants.map(function (v, i) { return isHidden(p, i) ? '' : '<option value="' + i + '">' + esc(v[lang] || v.it) + (isOff(p, i) ? ' - ' + esc(tx('soldout_s')) : '') + '</option>'; }).join('') + '</select>';
     card.innerHTML =
       '<div class="ph">' + badgeFor(p) + '<img alt="" loading="lazy"><div class="fallback">' + esc(pname(p)) + '</div></div>' +
-      '<div class="body"><h3>' + esc(pname(p)) + '</h3>' + (pdesc(p) ? '<p class="d">' + esc(pdesc(p)) + '</p>' : '') + vars + opts +
+      '<div class="body"><h3>' + esc(pname(p)) + '</h3>' + (pdesc(p) ? '<p class="d">' + esc(pdesc(p)) + '</p>' : '') + '<p class="d pre-l" hidden></p>' + vars + opts +
       '<div class="buy"><span class="price"></span><button type="button" class="add">' + esc(t('add')) + '</button></div></div>';
     var img = $('img', card), ph = $('.ph', card), price = $('.price', card);
     function upd() { price.textContent = money(p.options[oi].price); }
@@ -218,7 +225,12 @@
     if (so) so.addEventListener('change', function () { oi = +so.value; upd(); });
     var btn = $('.add', card);
     ph.setAttribute('data-sold', tx('soldout'));
-    function sync() { var off = isOff(p, vi); card.classList.toggle('soldout', off); btn.disabled = off; btn.textContent = off ? tx('soldout') : t('add'); }
+    var preL = $('.pre-l', card);
+    function sync() {
+      var off = isOff(p, vi); card.classList.toggle('soldout', off); btn.disabled = off; btn.textContent = off ? tx('soldout') : t('add');
+      var pr = preOf(p, vi); card.classList.toggle('preorder', !!pr);
+      if (preL) { preL.hidden = !pr; preL.textContent = pr ? tx('pre') + ' · ' + tx('pre_s', { x: pr }) : ''; }
+    }
     sync();
     btn.addEventListener('click', function () {
       addToCart(p.id, vi, oi, 1);
@@ -259,7 +271,7 @@
     if (!sec) {
       sec = document.createElement('section'); sec.className = 'cat'; sec.id = c.id; shop.appendChild(sec);
     }
-    var all = C.products.filter(function (p) { return p.cat === c.id; });
+    var all = C.products.filter(function (p) { return p.cat === c.id && !isHidden(p, -1); });
     var tagsHere = []; all.forEach(function (p) { p.tags.forEach(function (x) { if (tagsHere.indexOf(x) < 0) tagsHere.push(x); }); });
     var chips = '';
     if (c.subs) chips = '<button type="button" class="chip" data-sub="" aria-pressed="' + (!f.sub) + '">' + esc(t('all')) + '</button>' + c.subs.map(function (s) { return '<button type="button" class="chip" data-sub="' + s.id + '" aria-pressed="' + (f.sub === s.id) + '">' + esc(s[lang]) + '</button>'; }).join('');
@@ -583,7 +595,7 @@
     if (!cart.length) { lines.innerHTML = '<p class="empty">' + esc(t('empty')) + '</p>'; foot.innerHTML = ''; return; }
     lines.innerHTML = cart.map(function (l, i) {
       var p = byId[l.id], o = p.options[l.o];
-      var sub2 = [vlabel(p, l.v), p.options.length > 1 ? olabel(p, l.o) : ''].filter(Boolean).join(' · ');
+      var sub2 = [vlabel(p, l.v), p.options.length > 1 ? olabel(p, l.o) : '', preOf(p, l.v) ? tx('pre') + ' · ' + tx('pre_s', { x: preOf(p, l.v) }) : ''].filter(Boolean).join(' · ');
       return '<div class="line' + (isOff(p, l.v) ? ' soldout-line' : '') + '" data-i="' + i + '"><div class="th"><img alt=""></div>' +
         '<div><div class="nm">' + esc(pname(p)) + '</div>' + (sub2 ? '<div class="vr">' + esc(sub2) + '</div>' : '') +
         '<div class="qty"><button type="button" data-d="-1" aria-label="-">−</button><span>' + l.q + '</span><button type="button" data-d="1" aria-label="+">+</button></div></div>' +

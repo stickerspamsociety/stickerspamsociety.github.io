@@ -123,6 +123,12 @@ a.ig{color:#b6ff00}
 .todo .ti small{color:#9a9a94;font-size:12px}.todo .ti .pacts{margin-top:0;flex:none}
 .okmail{color:#b6ff00;font-size:13px;align-self:center;margin-right:4px}
 .ord.cancelled{opacity:.6}
+.ptools{display:grid;grid-template-columns:auto 1fr;gap:6px 8px;align-items:center;margin-top:8px}.ptools .lbl{grid-column:1/-1;margin-top:2px}.ptools .small{margin:0}.prei{min-height:40px;font-size:14px;grid-column:1/-1}
+.small.hidb{border-color:#ff7b7b;color:#ff7b7b}.hidp .nm,.hidp .th{opacity:.4}
+.eye{height:44px;width:40px;border:2px solid #3a3a37;background:transparent;cursor:pointer;font-size:16px;padding:0}.eye.on{border-color:#ff7b7b}.vs.hid .v{opacity:.4}
+.stk.lowi{width:62px;color:#9a9a94}.stk.lowx{border-color:#ffb000;color:#ffb000}
+.rubp{border:2px solid #b6ff00;padding:12px;margin-bottom:12px}.rubr{display:grid;grid-template-columns:1fr 64px auto;gap:6px;align-items:center;border-bottom:1px solid #2a2a2a;padding:6px 0;font-size:14px}.rubr small{display:block;color:#9a9a94;font-size:12px}.rubr .small{margin:0}
+.fmtr{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}.fmtr .chip{height:38px;font-size:13px}.fmtr .chip.sel{background:#7ab8ff;border-color:#7ab8ff;color:#0b0b0b}
 </style>
 </head>
 <body>
@@ -145,11 +151,15 @@ a.ig{color:#b6ff00}
 <div class="chips" id="ochips"></div>
 <input id="oq" class="fld" type="search" aria-label="Cerca un ordine" placeholder="Cerca per nome, città, Instagram, codice, etichetta…" style="margin-bottom:12px">
 <div id="prep"></div>
+<div id="sender"></div>
 <div id="olist"></div>
 <div id="omore"></div>
 <div class="bulk" style="flex-wrap:wrap">
 <button type="button" class="chip" id="oref">Aggiorna</button>
 <button type="button" class="chip" id="oprep">Preparazione</button>
+<button type="button" class="chip" id="opack">CSV Packlink (BRT/SDA)</button>
+<a class="chip" id="opackgo" href="https://pro.packlink.it/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Apri Packlink ↗</a>
+<button type="button" class="chip" id="osender">Mittente Packlink</button>
 <button type="button" class="chip" id="ocsv">CSV della lista</button>
 <button type="button" class="chip" data-csvp="day">CSV oggi</button>
 <button type="button" class="chip" data-csvp="week">CSV settimana</button>
@@ -165,6 +175,8 @@ a.ig{color:#b6ff00}
 <div id="prod" hidden>
 <div id="top"></div>
 <div id="secs"></div>
+<button type="button" class="btn" id="rubbtn">Ho rubato dal magazzino</button>
+<div id="rub"></div>
 <div id="vac"></div>
 <input id="q" class="fld" type="search" aria-label="Cerca un prodotto" placeholder="Cerca un prodotto…">
 <div class="chips" id="chips"></div>
@@ -181,7 +193,7 @@ a.ig{color:#b6ff00}
   'use strict';
   var CFG = window.SITE_CONFIG || {}, C = window.CATALOG, EP = (CFG.checkoutEndpoint || '').replace(/\/+$/, '');
   var $ = function (s) { return document.querySelector(s); };
-  var pw = '', st = { closed: false, mode: 'closed', msg: '', back: '', off: [] }, prev = null, filter = 'all', q = '', saveT, toastT;
+  var pw = '', st = { closed: false, mode: 'closed', msg: '', back: '', off: [], hide: [], pre: {} }, prev = null, filter = 'all', q = '', saveT, toastT;
   var cats = {}; C.categories.forEach(function (c) { cats[c.id] = c.it[0]; });
 
   function norm(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
@@ -213,7 +225,7 @@ a.ig{color:#b6ff00}
     $('#lerr').textContent = '';
     if (!EP) { $('#lerr').textContent = 'Manca l’indirizzo del worker in config.js.'; return; }
     api('GET').then(function (j) {
-      st = { closed: !!j.closed, mode: j.mode === 'open' ? 'open' : 'closed', msg: j.msg || '', back: j.back || '', off: j.off || [] };
+      st = { closed: !!j.closed, mode: j.mode === 'open' ? 'open' : 'closed', msg: j.msg || '', back: j.back || '', off: j.off || [], hide: j.hide || [], pre: j.pre || {} };
       try { (remember ? localStorage : sessionStorage).setItem('rb_pw', pw); } catch (e) {}
       $('#login').hidden = true; $('#app').hidden = false; render(); setStat(''); initOrders();
     }).catch(function (e) { $('#lerr').textContent = e.status === 401 ? 'Password sbagliata.' : 'Errore: ' + e.message; });
@@ -238,13 +250,18 @@ a.ig{color:#b6ff00}
       p.variants.forEach(function (v, i) { if (!off(key(p, i))) n++; });
       vs = '<div class="vars">' + p.variants.map(function (v, i) {
         var on = !o && !off(key(p, i));
-        return '<span class="vs"><button type="button" class="v' + (on ? ' on' : '') + '" data-k="' + esc(key(p, i)) + '" aria-pressed="' + on + '"' + (o ? ' disabled' : '') + '>' + esc(v.it) + '</button>' + stkInput(key(p, i)) + '</span>';
+        var hv = isHid(key(p, i));
+        return '<span class="vs' + (hv ? ' hid' : '') + '"><button type="button" class="v' + (on ? ' on' : '') + '" data-k="' + esc(key(p, i)) + '" aria-pressed="' + on + '"' + (o ? ' disabled' : '') + '>' + esc(v.it) + '</button>' + stkInput(key(p, i)) + lowInput(key(p, i)) +
+          '<button type="button" class="eye' + (hv ? ' on' : '') + '" data-hide="' + esc(key(p, i)) + '" title="' + (hv ? 'Nascosta: tocca per mostrarla' : 'Nascondi questa variante') + '">' + (hv ? '🚫' : '👁') + '</button></span>';
       }).join('') + '</div>';
     }
-    var sub = esc(cats[p.cat] || '') + ' · ' + (catOff(p.cat) ? 'SEZIONE SPENTA · ' : '') + (o ? 'ESAURITO' : (p.variants ? n + ' su ' + p.variants.length + ' disponibili' : 'disponibile'));
-    return '<div class="item' + (o ? ' offp' : '') + '"><div class="row"><div class="th">' + esc(initials(p.name)) +
+    var hp = isHid(p.id), pr = (st.pre || {})[p.id] || '';
+    var sub = esc(cats[p.cat] || '') + ' · ' + (hp ? 'NASCOSTO · ' : '') + (pr ? 'PREORDINE dal ' + esc(pr) + ' · ' : '') + (catOff(p.cat) ? 'SEZIONE SPENTA · ' : '') + (o ? 'ESAURITO' : (p.variants ? n + ' su ' + p.variants.length + ' disponibili' : 'disponibile'));
+    return '<div class="item' + (o ? ' offp' : '') + (hp ? ' hidp' : '') + '"><div class="row"><div class="th">' + esc(initials(p.name)) +
       '<img alt="" src="img/prodotti/' + p.id + '.jpg" onerror="if(this.dataset.t){this.style.display=\'none\'}else{this.dataset.t=1;this.src=this.src.replace(\'.jpg\',\'.png\')}"></div>' +
-      '<div class="nm">' + esc(p.name) + '<small>' + sub + '</small></div>' + sw(!o, p.id, p.name + (o ? ' esaurito' : ' disponibile')) + '</div>' + (p.variants ? vs : '<div class="vars"><span class="vs"><label class="lbl">Pezzi</label>' + stkInput(p.id) + '</span></div>') + '</div>';
+      '<div class="nm">' + esc(p.name) + '<small>' + sub + '</small></div>' + sw(!o, p.id, p.name + (o ? ' esaurito' : ' disponibile')) + '</div>' + (p.variants ? vs : '<div class="vars"><span class="vs"><label class="lbl">Pezzi</label>' + stkInput(p.id) + lowInput(p.id) + '</span></div>') +
+      '<div class="ptools"><button type="button" class="small' + (hp ? ' hidb' : '') + '" data-hide="' + esc(p.id) + '">' + (hp ? '🚫 Nascosto: mostra' : '👁 Nascondi dal sito') + '</button>' +
+      '<label class="lbl">Preordine, spedisco dal</label><input class="fld prei" data-pre="' + esc(p.id) + '" maxlength="40" placeholder="es. 15 dicembre" value="' + esc(pr) + '"></div></div>';
   }
   function render() {
     var nOff = C.products.filter(function (p) { return off(p.id); }).length, nAny = C.products.filter(anyOff).length;
@@ -272,6 +289,8 @@ a.ig{color:#b6ff00}
   function preview() { var e = $('#pvt'); if (e) e.textContent = st.msg || (st.mode === 'open' ? 'Siamo in vacanza: puoi ordinare, spediamo dal ' + (st.back || '…') + '.' : 'Siamo in vacanza! Torniamo presto.'); }
 
   // ---- azioni ----
+  function isHid(k) { return (st.hide || []).indexOf(k) > -1; }
+  function toggleHide(k) { prev = clone(st); st.hide = st.hide || []; var i = st.hide.indexOf(k); if (i > -1) st.hide.splice(i, 1); else st.hide.push(k); save(true); }
   function toggle(k) { prev = clone(st); var i = st.off.indexOf(k); if (i > -1) st.off.splice(i, 1); else st.off.push(k); save(true); }
   document.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -309,6 +328,9 @@ a.ig{color:#b6ff00}
   var FERMO_GG = 2;                                   // dopo quanti giorni un ordine non spedito e' "fermo"
   var PROB_H = 48;                                    // ore per la risposta del cliente in caso di problema
   var GMAIL = 'stickerspamsociety@gmail.com';         // da qui partono le email ai clienti
+  // formati del pacco per il CSV Packlink: misure in cm (larghezza, altezza, lunghezza) e peso in kg. Cambiali qui se servono.
+  var FMT = { s: { n: 'Piccolo', w: 10, h: 5, l: 20, kg: 1 }, m: { n: 'Medio', w: 20, h: 10, l: 30, kg: 2 }, l: { n: 'Grande', w: 30, h: 20, l: 40, kg: 3 } };
+  var PACKLINK = 'https://pro.packlink.it/';
   // Link di tracciamento: BRT diretto (verificato). InPost e SDA: pagina del corriere, il numero e' scritto nell'email.
   var TRACK = {
     brt: { n: 'BRT', url: 'https://services.brt.it/it/tracking?OP=N&CD={n}' },
@@ -346,7 +368,7 @@ a.ig{color:#b6ff00}
   function fixMeta(o) {                               // valori mancanti (ordini vecchi o Worker vecchio)
     o.st = o.st || 'new'; o.trk = o.trk || ''; o.note = o.note || ''; o.tag = o.tag || '';
     o.car = o.car || (o.method === 'inpost' ? 'inpost' : (o.method === 'letter' || o.method === 'letterworld') ? 'poste' : '');
-    o.pt = o.pt || 0; o.sh = o.sh || 0; o.dv = o.dv || 0; o.es = o.es || 0; o.ep = o.ep || 0; o.rs = o.rs || 0; o.cx = o.cx || 0;
+    o.pt = o.pt || 0; o.sh = o.sh || 0; o.dv = o.dv || 0; o.es = o.es || 0; o.ep = o.ep || 0; o.rs = o.rs || 0; o.cx = o.cx || 0; o.fmt = o.fmt || '';
     return o;
   }
   function loadOrders(reset) {
@@ -356,7 +378,7 @@ a.ig{color:#b6ff00}
       orders = orders.concat((j.orders || []).map(fixMeta)); hasMore = !!j.has_more; lastId = j.last || ''; loading = false; renderOrders();
     }).catch(function (e) { loading = false; $('#olist').innerHTML = '<p class="sub" style="color:#ff7b7b">Errore: ' + esc(e.message) + '</p>'; });
   }
-  function code(o) { return o.id.slice(-6).toUpperCase(); }
+  function code(o) { return o.code || o.id.slice(-6).toUpperCase(); }
   function when(o) { return new Date(o.t * 1000).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
   function dmy(ms) { return ms ? new Date(ms).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : ''; }
   function addrText(o) {
@@ -423,6 +445,7 @@ a.ig{color:#b6ff00}
       '<div class="sts">' + STS.map(function (s) { return '<button type="button" class="chip' + (o.st === s[0] ? ' sel' : '') + '" data-st="' + s[0] + '" data-oid="' + o.id + '">' + s[1] + '</button>'; }).join('') + '</div>' +
       '<div class="shp">' + carSelect(o) + '<input class="fld" data-trk="' + o.id + '" maxlength="60" placeholder="Tracking: scrivilo e passa a Spediti" value="' + esc(o.trk) + '">' +
       '<button type="button" class="small" data-ship="' + o.id + '">Spedito</button></div>' +
+      (o.method === 'brt' || o.method === 'inpost' ? '<div class="fmtr"><span class="lbl">Pacco</span>' + ['s', 'm', 'l'].map(function (f) { return '<button type="button" class="chip' + (o.fmt === f ? ' sel' : '') + '" data-fmt="' + f + '" data-oid="' + o.id + '">' + FMT[f].n + ' ' + FMT[f].kg + ' kg</button>'; }).join('') + '</div>' : '') +
       '<div class="meta2"><input class="fld" data-note="' + o.id + '" maxlength="500" placeholder="Nota interna (solo tu)" value="' + esc(o.note) + '"><input class="fld" data-tag="' + o.id + '" maxlength="40" placeholder="Etichetta" value="' + esc(o.tag) + '"></div>' +
       '</div>';
   }
@@ -494,7 +517,7 @@ a.ig{color:#b6ff00}
     var l = prepOrders(), s = prepSum(l);
     $('#prep').innerHTML = '<div class="prep"><div class="lbl">Preparazione: ' + l.length + ' ordini nuovi senza etichetta</div>' +
       (s.length ? s.map(function (x) { return '<p><b>' + x.q + '×</b> ' + esc(x.n) + '</p>'; }).join('') : '<p class="sub">Niente da preparare.</p>') +
-      (l.length ? '<p class="om" style="margin-top:8px">Ordini: ' + l.map(function (o) { return '#' + code(o) + ' ' + esc(o.name); }).join(' · ') + '</p><button type="button" class="small" id="oprepcsv" style="margin-top:8px">CSV preparazione</button>' : '') + '</div>';
+      (l.length ? '<p class="om" style="margin-top:8px">Ordini: ' + l.map(function (o) { return '#' + code(o) + ' ' + esc(o.name); }).join(' · ') + '</p><button type="button" class="small" id="oprepcsv" style="margin-top:8px">CSV preparazione</button> <button type="button" class="small" id="oprepprint" style="margin-top:8px">🖨 Stampa preparazione</button>' : '') + '</div>';
   }
   function renderOrders() {
     var nTodo = orders.filter(function (o) { return OPEN[o.st]; }).length, nShip = orders.filter(function (o) { return o.st === 'shipped'; }).length, nF = orders.filter(isFermo).length;
@@ -511,7 +534,7 @@ a.ig{color:#b6ff00}
   function find(id) { return orders.filter(function (o) { return o.id === id; })[0]; }
   function saveOrder(o) {
     setStat('Salvataggio…');
-    oapi('POST', '/admin/order', { id: o.id, st: o.st, trk: o.trk || '', car: o.car || '', note: o.note || '', tag: o.tag || '', es: o.es || 0, ep: o.ep || 0, rs: o.rs || 0 })
+    oapi('POST', '/admin/order', { id: o.id, st: o.st, trk: o.trk || '', car: o.car || '', note: o.note || '', tag: o.tag || '', es: o.es || 0, ep: o.ep || 0, rs: o.rs || 0, fmt: o.fmt || '' })
       .then(function (v) { o.pt = v.pt || 0; o.sh = v.sh || 0; o.dv = v.dv || 0; o.cx = v.cx || 0;
         if (o.es && !v.es) setStat('ATTENZIONE: il Worker non salva le email mandate. Controlla che su Cloudflare ci sia il Worker v5.5.', true); else setStat('Salvato · ' + hhmm()); renderOrders(); })
       .catch(function (e) { setStat('NON salvato: ' + e.message + (/dati non validi/.test(e.message) ? ' (su Cloudflare c\'è un Worker vecchio: serve il v5.5)' : ''), true); });
@@ -536,14 +559,14 @@ a.ig{color:#b6ff00}
                                   : 'Puoi seguirlo con @trackbot su Telegram, 17track.net oppure dealer-send.com.'));
     if (kind === 'ship' && t === 'std') return { s: 'Il tuo ordine sticker spam #' + c + ' è stato spedito', b:
       'Buongiorno ' + n + ',\n\nil suo ordine #' + c + ' è stato spedito con ' + car + '.\n' + (trkLine ? trkLine + '\n' : '') +
-      '\nRiepilogo:\n' + itemsTxt(o) + '\nTotale: ' + eur(o.total) + '\n\nGrazie per il supporto, apprezziamo che apprezzate.\nRestiamo a disposizione,\nSticker Spam Society' };
+      '\nRiepilogo:\n' + itemsTxt(o) + '\nTotale: ' + eur(o.total) + '\n\nGrazie per il supporto, apprezziamo che apprezzate.\nRestiamo a disposizione,\nSticker Spam Society\n\nInstagram: https://www.instagram.com/stickerspams/' };
     if (kind === 'ship') return { s: 'Vossignoria, il vostro ordine #' + c + ' ha preso il largo', b:
       'Illustrissimo/a ' + n + ',\n\ncon somma letizia vi annunciamo che il vostro ordine #' + c + ' è partito al trotto, guidato dal cocchiere ' + car + '.\n' + (trkLine ? trkLine + '\n' : '') +
-      '\nEcco ciò che viaggia verso le vostre stanze:\n' + itemsTxt(o) + '\nPer la modica somma di ' + eur(o.total) + '.\n\nRestiamo a vostra disposizione,\nSticker Spam Society' };
+      '\nEcco ciò che viaggia verso le vostre stanze:\n' + itemsTxt(o) + '\nPer la modica somma di ' + eur(o.total) + '.\n\nRestiamo a vostra disposizione,\nSticker Spam Society\n\nInstagram: https://www.instagram.com/stickerspams/' };
     if (t === 'std') return { s: 'Ordine sticker spam #' + c + ': ci serve una conferma', b:
-      'Buongiorno ' + n + ',\n\nper spedire il suo ordine #' + c + ' ci manca un\'informazione: ' + why + '.\n\nLe chiediamo di rispondere a questa email entro 48 ore. Se non riceviamo risposta, annulleremo l\'ordine e la rimborseremo per intero.\n\nRestiamo a disposizione,\nSticker Spam Society' };
+      'Buongiorno ' + n + ',\n\nper spedire il suo ordine #' + c + ' ci manca un\'informazione: ' + why + '.\n\nLe chiediamo di rispondere a questa email entro 48 ore. Se non riceviamo risposta, annulleremo l\'ordine e la rimborseremo per intero.\n\nRestiamo a disposizione,\nSticker Spam Society\n\nInstagram: https://www.instagram.com/stickerspams/' };
     return { s: 'Vossignoria, il vostro ordine #' + c + ' attende un vostro cenno', b:
-      'Illustrissimo/a ' + n + ',\n\nprima di affidare il vostro ordine #' + c + ' ai corrieri del regno ci occorre un dettaglio: ' + why + '.\n\nVi preghiamo di rispondere entro 48 ore. In mancanza, con sommo rammarico, annulleremo l\'ordine e vi restituiremo ogni singolo denaro.\n\nRestiamo a vostra disposizione,\nSticker Spam Society' };
+      'Illustrissimo/a ' + n + ',\n\nprima di affidare il vostro ordine #' + c + ' ai corrieri del regno ci occorre un dettaglio: ' + why + '.\n\nVi preghiamo di rispondere entro 48 ore. In mancanza, con sommo rammarico, annulleremo l\'ordine e vi restituiremo ogni singolo denaro.\n\nRestiamo a vostra disposizione,\nSticker Spam Society\n\nInstagram: https://www.instagram.com/stickerspams/' };
   }
   function openMail(kind, o) {
     if (!o.email) { setStat('Questo ordine non ha email', true); return; }
@@ -554,6 +577,70 @@ a.ig{color:#b6ff00}
     if (kind === 'prob' && o.st !== 'problem') { o.st = 'problem'; o.rs = 0; }
     if (kind === 'ship') o.es = Date.now(); else o.ep = Date.now();
     saveOrder(o);
+  }
+  // ---- stampa su rotolo continuo da 102 mm (Brother QL-1100): da Firefox, carta "102 mm continuo", scala 100% ----
+  function printHtml(title, body) {
+    var w = window.open('', '_blank'); if (!w) { setStat('Il browser ha bloccato la finestra di stampa: consenti i popup', true); return; }
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>' +
+      '@page{size:102mm 150mm;margin:4mm}*{box-sizing:border-box}body{margin:0;width:94mm;font-family:Arial,Helvetica,sans-serif;color:#000;font-size:11pt;line-height:1.25}' +
+      'h1{font-size:15pt;margin:0 0 2mm}h2{font-size:12pt;margin:3mm 0 1mm;border-top:1px solid #000;padding-top:2mm}.big{font-size:13pt;font-weight:bold}.it{margin:1mm 0}.ck{display:inline-block;width:4mm;height:4mm;border:1px solid #000;margin-right:2mm;vertical-align:-0.5mm}.sm{font-size:9pt}' +
+      '</sty'+'le></head><body>' + body + '<script>window.onload=function(){window.print();}<\/script></body></html>');
+    w.document.close();
+  }
+  function slipHtml(o) {
+    var a = o.addr;
+    return '<h1>#' + esc(code(o)) + '</h1><div class="sm">' + when(o) + ' · ' + esc(METHODS[o.method] || o.method) + (o.car && TRACK[o.car] ? ' · ' + esc(TRACK[o.car].n) : '') + (o.fmt ? ' · ' + FMT[o.fmt].n : '') + '</div>' +
+      '<h2>Destinatario</h2><div class="big">' + esc(o.name) + '</div><div>' + esc(a.l1) + (a.l2 ? ', ' + esc(a.l2) : '') + '</div><div>' + esc(a.zip + ' ' + a.city) + (a.prov ? ' (' + esc(a.prov) + ')' : '') + ' ' + esc(a.cc) + '</div>' +
+      (o.bell ? '<div>Campanello: ' + esc(o.bell) + '</div>' : '') + (o.locker ? '<div>Locker: <b>' + esc(o.locker) + '</b></div>' : '') + (o.phone ? '<div class="sm">Tel: ' + esc(o.phone) + '</div>' : '') +
+      '<h2>Da mettere nel pacco</h2>' + o.items.map(function (i) { return '<div class="it"><span class="ck"></span><b>' + i.q + '×</b> ' + esc(i.n) + '</div>'; }).join('') +
+      (o.note ? '<h2>Nota</h2><div>' + esc(o.note) + '</div>' : '');
+  }
+  function printOrder(o) { printHtml('Ordine ' + code(o), slipHtml(o)); }
+  function printPrep() {
+    var l = prepOrders(), s = prepSum(l);
+    printHtml('Preparazione', '<h1>Preparazione ' + new Date().toLocaleDateString('it-IT') + '</h1><div class="sm">' + l.length + ' ordini</div><h2>Totale articoli</h2>' +
+      s.map(function (x) { return '<div class="it"><span class="ck"></span><b>' + x.q + '×</b> ' + esc(x.n) + '</div>'; }).join('') +
+      '<h2>Ordini</h2>' + l.map(function (o) { return '<div class="it"><span class="ck"></span>#' + esc(code(o)) + ' ' + esc(o.name) + '</div>'; }).join(''));
+  }
+  // ---- mittente Packlink: salvato nel Worker (privato), non scritto nella pagina ----
+  var sender = null, showSender = false;
+  var SFIELDS = [['nome', 'Nome'], ['cognome', 'Cognome'], ['azienda', 'Azienda'], ['via', 'Via e numero civico'], ['civico', 'Seconda riga (es. c/o negozio)'], ['cap', 'CAP'], ['citta', 'Città'], ['prov', 'Provincia (es. BO)'], ['paese', 'Paese (IT)'], ['tel', 'Telefono'], ['email', 'Email']];
+  function loadSender(cb) { oapi('GET', '/admin/sender').then(function (j) { sender = j.sender || {}; if (cb) cb(); }).catch(function (e) { setStat('Mittente non letto: ' + e.message, true); }); }
+  function renderSender() {
+    var el = $('#sender'); if (!showSender) { el.innerHTML = ''; return; }
+    if (!sender) { el.innerHTML = '<p class="sub">Carico…</p>'; return loadSender(renderSender); }
+    el.innerHTML = '<div class="prep"><div class="lbl">Mittente per il CSV Packlink (salvato nel Worker, non visibile nella pagina)</div>' +
+      SFIELDS.map(function (f) { return '<input class="fld" data-snd="' + f[0] + '" placeholder="' + f[1] + '" value="' + esc(sender[f[0]] || '') + '" style="margin:4px 0">'; }).join('') +
+      '<button type="button" class="small" id="sndsave" style="margin-top:8px">Salva mittente</button></div>';
+  }
+  function saveSender() {
+    var x = {}; SFIELDS.forEach(function (f) { var e = document.querySelector('[data-snd="' + f[0] + '"]'); x[f[0]] = e ? e.value.trim() : ''; });
+    oapi('POST', '/admin/sender', { sender: x }).then(function (j) { sender = j.sender; showSender = false; renderSender(); setStat('Mittente salvato · ' + hhmm()); }).catch(function (e) { setStat('NON salvato: ' + e.message, true); });
+  }
+  // ---- CSV Packlink: ordini BRT/SDA ancora da spedire, stesse colonne dello script packlink-ordini.ps1 ----
+  function packlinkCsv() {
+    function go() {
+      var S = sender || {};
+      if (!S.via || !S.cap || !S.citta) { setStat('Prima compila il Mittente Packlink', true); showSender = true; return renderSender(); }
+      var l = orders.filter(function (o) { return o.method === 'brt' && OPEN[o.st] && o.paid; }).sort(function (a, b) { return a.t - b.t; });
+      if (!l.length) { setStat('Nessun pacco BRT/SDA da spedire'); return; }
+      var miss = l.filter(function (o) { return !o.fmt; });
+      if (miss.length && !confirm(miss.length + ' ordini senza formato del pacco: uso "Piccolo 1 kg". Continuo?')) return;
+      var head = "Numero di ordine;nome mittente;Cognome mittente;Azienda mittente;Indirizzo Di Spedizione 1;Indirizzo Di Spedizione 2;CAP Spedizione;citta Spedizione;provincia di Spedizione;Paese di spedizione;Telefono spedizione;Email Spedizione;Nome destinatario;Cognome destinatario;Azienda destinatario;Indirizzo di consegna 1;Indirizzo di consegna 2;CAP di consegna;citta di consegna;provincia di consegna;Paese di consegna;Telefono di consegna;Email di consegna;assicurazione;Titolo dell'oggetto;Valore merce;Larghezza oggetto;Altezza oggetto;Lughezza oggetto;Peso dell'oggetto";
+      function clean(t) { return String(t == null ? '' : t).replace(/[;\r\n]/g, ' ').trim(); }
+      function phone(t) { var p = clean(t).replace(/[\s\-\.\(\)]/g, ''); if (p.indexOf('+39') === 0) p = p.slice(3); else if (p.indexOf('0039') === 0) p = p.slice(4); return p; }
+      var rows = l.map(function (o) {
+        var a = o.addr, nm = clean(o.name), i = nm.indexOf(' '), f = FMT[o.fmt || 's'];
+        var first = i > 0 ? nm.slice(0, i) : nm, last = i > 0 ? nm.slice(i + 1).trim() : '-';
+        var val = ((o.total - (o.ship || 0)) / 100).toFixed(2);
+        return [code(o), S.nome, S.cognome, S.azienda, S.via, S.civico, S.cap, S.citta, S.prov, S.paese || 'IT', S.tel, S.email,
+          first, last, '', a.l1, a.l2, a.zip, a.city, a.prov, a.cc, phone(o.phone), o.email, 'no',
+          o.items.map(function (x) { return x.q + 'x ' + x.n; }).join(', '), val, f.w, f.h, f.l, f.kg].map(clean).join(';');
+      });
+      saveCsv([head].concat(rows), 'ordini-packlink-' + ymd(new Date()) + '.csv');
+      setStat('CSV Packlink: ' + rows.length + ' pacchi · ora aprilo su Packlink');
+    }
+    if (sender) go(); else loadSender(go);
   }
   // ---- CSV ----
   function csvCell(v) { v = String(v == null ? '' : v); return /[;"\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
@@ -646,6 +733,12 @@ a.ig{color:#b6ff00}
     if (b.id === 'oref') { loadInfo(); return loadOrders(true); }
     if (b.id === 'oprep') { showPrep = !showPrep; return renderPrep(); }
     if (b.id === 'oprepcsv') return prepCsv();
+    if (b.id === 'oprepprint') return printPrep();
+    if (b.id === 'opack') return packlinkCsv();
+    if (b.id === 'osender') { showSender = !showSender; return renderSender(); }
+    if (b.id === 'sndsave') return saveSender();
+    if (b.hasAttribute('data-print')) { var opr = find(b.getAttribute('data-print')); if (opr) printOrder(opr); return; }
+    if (b.hasAttribute('data-fmt')) { var of2 = find(b.getAttribute('data-oid')); if (!of2) return; var fv = b.getAttribute('data-fmt'); of2.fmt = of2.fmt === fv ? '' : fv; return saveOrder(of2); }
     if (b.id === 'ocsv') return downloadCsv(oVisible());
     if (b.id === 'otest') {
       setStat('Invio prova…');
@@ -796,14 +889,53 @@ a.ig{color:#b6ff00}
   // ================= MAGAZZINO (privato: lo vedi solo qui) =================
   // Casella vuota = pezzi non contati (sempre in vendita). Numero = pezzi in magazzino:
   // a ogni ordine pagato scala da solo; a 0 il prodotto si spegne ("Esaurito" sul sito); se lo ricarichi si riaccende.
-  var stockMap = {};
+  var stockMap = {}, lowMap = {}, showRub = false, rubQ = '';
   function stkInput(k) {
-    var has = Object.prototype.hasOwnProperty.call(stockMap, k), z = has && stockMap[k] <= 0;
-    return '<input class="stk' + (has ? ' has' : '') + (z ? ' zero' : '') + '" data-s="' + esc(k) + '" inputmode="numeric" placeholder="pz" aria-label="Pezzi in magazzino" value="' + (has ? stockMap[k] : '') + '">';
+    var has = Object.prototype.hasOwnProperty.call(stockMap, k), z = has && stockMap[k] <= 0, lw = has && !z && lowMap[k] && stockMap[k] <= lowMap[k];
+    return '<input class="stk' + (has ? ' has' : '') + (z ? ' zero' : '') + (lw ? ' lowx' : '') + '" data-s="' + esc(k) + '" inputmode="numeric" placeholder="pz" aria-label="Pezzi in magazzino" title="Pezzi in magazzino" value="' + (has ? stockMap[k] : '') + '">';
   }
+  // soglia di scorta: sotto questo numero arriva "SCORTA BASSA" su Telegram e la casella pz diventa arancione
+  function lowInput(k) { return '<input class="stk lowi" data-low="' + esc(k) + '" inputmode="numeric" placeholder="soglia" aria-label="Soglia scorta bassa" title="Soglia di scorta bassa" value="' + (lowMap[k] || '') + '">'; }
   function loadStock() {
     oapi('GET', '/admin/stock').then(function (j) { stockMap = j.stock || {}; render(); })
       .catch(function (e) { setStat('Magazzino non letto: ' + e.message, true); });
+    oapi('GET', '/admin/low').then(function (j) { lowMap = j.low || {}; render(); }).catch(function () {});
+  }
+  function saveLow(k, raw) {
+    var v = String(raw).trim(), next = {}, x; for (x in lowMap) next[x] = lowMap[x];
+    if (v === '' || v === '0') delete next[k]; else { var n = Math.floor(Number(v)); if (!(n > 0 && n <= 99999)) { setStat('Soglia non valida', true); return; } next[k] = n; }
+    setStat('Salvataggio\u2026');
+    oapi('POST', '/admin/low', { low: next }).then(function (j) { lowMap = j.low || {}; render(); setStat('Soglia salvata \u00b7 ' + hhmm()); })
+      .catch(function (e) { setStat('NON salvato: ' + e.message, true); });
+  }
+  // "Ho rubato dal magazzino": togli pezzi a mano (solo prodotti contati)
+  function keysOf(p) { return p.variants ? p.variants.map(function (v) { return { k: p.id + '|' + v.it, n: p.name + ' - ' + v.it }; }) : [{ k: p.id, n: p.name }]; }
+  function renderRub() {
+    var el = $('#rub'); if (!el) return;
+    if (!showRub) { el.innerHTML = ''; return; }
+    var h = '<div class="rubp"><input id="rubq" class="fld" type="search" placeholder="Cerca cosa hai preso…" value="' + esc(rubQ) + '" style="margin-bottom:8px">';
+    C.categories.forEach(function (c) {
+      var rows = [];
+      C.products.filter(function (p) { return p.cat === c.id; }).forEach(function (p) {
+        keysOf(p).forEach(function (x) {
+          if (rubQ && norm(x.n).indexOf(norm(rubQ)) < 0) return;
+          var has = Object.prototype.hasOwnProperty.call(stockMap, x.k);
+          rows.push('<div class="rubr"><span>' + esc(x.n) + '<small>' + (has ? stockMap[x.k] + ' pz' : 'non contato') + '</small></span>' +
+            (has ? '<input class="stk" data-rubn="' + esc(x.k) + '" inputmode="numeric" value="1"><button type="button" class="small" data-rub="' + esc(x.k) + '">Togli</button>' : '') + '</div>');
+        });
+      });
+      if (rows.length) h += '<div class="lbl" style="margin:10px 0 4px">' + esc(c.it[0]) + '</div>' + rows.join('');
+    });
+    el.innerHTML = h + '</div>';
+  }
+  function rubTake(k, n) {
+    if (!Object.prototype.hasOwnProperty.call(stockMap, k)) return;
+    n = Math.floor(Number(n)); if (!(n >= 1)) { setStat('Quanti pezzi?', true); return; }
+    var next = {}, x; for (x in stockMap) next[x] = stockMap[x];
+    next[k] = Math.max(0, stockMap[k] - n);
+    setStat('Salvataggio\u2026');
+    oapi('POST', '/admin/stock', { stock: next }).then(function (j) { stockMap = j.stock || {}; if (j.off) st.off = j.off; render(); renderRub(); setStat('Tolti ' + n + ' pz · restano ' + stockMap[k] + ' · ' + hhmm()); })
+      .catch(function (e) { setStat('NON salvato: ' + e.message, true); });
   }
   function saveStock(k, raw) {
     var v = String(raw).trim(), next = {}, x;
@@ -815,7 +947,17 @@ a.ig{color:#b6ff00}
       .catch(function (e) { setStat('NON salvato: ' + e.message, true); render(); });
   }
   document.addEventListener('change', function (e) {
-    var el = e.target; if (el.hasAttribute && el.hasAttribute('data-s')) saveStock(el.getAttribute('data-s'), el.value);
+    var el = e.target; if (!el.hasAttribute) return;
+    if (el.hasAttribute('data-s')) saveStock(el.getAttribute('data-s'), el.value);
+    if (el.hasAttribute('data-low')) saveLow(el.getAttribute('data-low'), el.value);
+    if (el.hasAttribute('data-pre')) { prev = clone(st); st.pre = st.pre || {}; var v = el.value.trim(); if (v) st.pre[el.getAttribute('data-pre')] = v; else delete st.pre[el.getAttribute('data-pre')]; save(true); }
+  });
+  document.addEventListener('input', function (e) { if (e.target.id === 'rubq') { rubQ = e.target.value; var pos = e.target.selectionStart; renderRub(); var n = $('#rubq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) {} } } });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.id === 'rubbtn') { showRub = !showRub; return renderRub(); }
+    if (b.hasAttribute('data-rub')) { var k = b.getAttribute('data-rub'), inp = b.parentNode.querySelector('[data-rubn]'); return rubTake(k, inp ? inp.value : 1); }
+    if (b.hasAttribute('data-hide')) return toggleHide(b.getAttribute('data-hide'));
   });
   document.addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b || !nf && tab !== 'new') return;
